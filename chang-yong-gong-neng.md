@@ -20,5 +20,7 @@ VictoriaMetrics在[vmui](chang-yong-gong-neng.md#vmui)的`Explore cardinality`�
 
 请参阅基数探测器示例和使用示例。
 
+## # 如何抓取 Prometheus Exporter，比如 [node-exporter](https://github.com/prometheus/node\_exporter) <a href="#how-to-scrape-prometheus-exporters-such-as-node-exporter" id="how-to-scrape-prometheus-exporters-such-as-node-exporter"></a>
+
 
 
