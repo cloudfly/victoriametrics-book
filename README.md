@@ -10,11 +10,11 @@ VictoriaMetrics是一个快速、经济高效且可扩展的监控解决方案�
 
 VictoriaMetrics提供[二进制发布版](https://github.com/VictoriaMetrics/VictoriaMetrics/releases)、[Docker镜像](https://hub.docker.com/r/victoriametrics/victoria-metrics/)、[Snap软件包](https://snapcraft.io/victoriametrics)和[源代码](https://github.com/VictoriaMetrics/VictoriaMetrics)。
 
-VictoriaMetrics的集群版本可以[在这里找到](victoriametrics/ji-qun-mo-shi.md)。
+VictoriaMetrics的集群版本可以[在这里找到](victoriametrics/ji-qun-ban-ben.md)。
 
 了解更多关于VictoriaMetrics的[核心概念](victoriametrics/he-xin-gai-nian.md)，并按照[快速开始](victoriametrics/kuai-su-kai-shi.md)获得更好的体验。
 
-它还有一个用户友好型日志数据库 - [VictoriaLogs](victorialogs/guan-yu-victorialogs.md)。
+它还有一个用户友好型日志数据库 - [VictoriaLogs](victorialogs/kuai-su-kai-shi.md)。
 
 如果你对VictoriaMetrics有任何问题，欢迎在[VictoriaMetrics社区Slack聊天](https://slack.victoriametrics.com/?\_gl=1\*64h7w2\*\_ga\*MTQzNjM0NTgyOC4xNjQ0MzA0NDk1\*\_ga\_N9SVT8S3HK\*MTY4OTQwODgzMS40OS4xLjE2ODk0MDg4NzMuMC4wLjA.)中提问。
 
@@ -22,7 +22,7 @@ VictoriaMetrics的集群版本可以[在这里找到](victoriametrics/ji-qun-mo-
 
 本书大部分内容都源自官方文档，但并没有对原文进行逐字逐句地翻译；对于冗余啰嗦，或是推广性质的内容会被省略掉，以减少一些学习干扰。
 
-此外，对官方文档的结构也会进行重新排版，因为我个人对官方文档反复查阅学习的一年后，发现对其文档结构还是糊里糊涂，每次只能靠搜索。所以为了降低读者的学习成本，我对文档结构进行了一定的重排。
+此外，对官方文档的结构也会进行重新排版，因为我个人对官方文档反复查阅学习的一年后，发现对其文档结构还是糊里糊涂，每次只能靠搜索（因为他们把开源和商业版本的文档全都混在一起了）。所以为了降低读者的学习成本，我对文档结构进行了一定的重排。
 
 {% hint style="info" %}
 在翻译文档的同时，也会夹杂一些个人思考，这些内容会文档中特殊标注出来。同时也欢迎读者参与讨论，互相交流看法。

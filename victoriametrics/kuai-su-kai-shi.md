@@ -4,14 +4,14 @@ description: 原文地址：https://docs.victoriametrics.com/Quick-Start.html
 
 # 快速开始
 
-## How to install <a href="#how-to-install" id="how-to-install"></a>
+## 如何安装 <a href="#how-to-install" id="how-to-install"></a>
 
-VictoriaMetrics is distributed in two forms:
+VictoriaMetrics 有 2 种发布形式：
 
-* [Single-server-VictoriaMetrics](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html) - all-in-one binary, which is very easy to use and maintain. Single-server-VictoriaMetrics perfectly scales vertically and easily handles millions of metrics/s;
-* [VictoriaMetrics Cluster](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html) - set of components for building horizontally scalable clusters.
+* [单机版本](dan-ji-ban-ben.md) - ALL-IN-ONE 的二进制形式，非常易于使用和维护。可完美地垂直扩展，并且轻松处理百万级的QPS写入。
+* [集群版本](ji-qun-ban-ben.md) - 一套组件，可用于构建水平可扩展集群。
 
-Single-server-VictoriaMetrics VictoriaMetrics is available as:
+单机版的 VictoriaMetrics 有以下集中提供方式：
 
 * [Managed VictoriaMetrics at AWS](https://aws.amazon.com/marketplace/pp/prodview-4tbfq5icmbmyc)
 * [Docker images](https://hub.docker.com/r/victoriametrics/victoria-metrics/)
@@ -22,9 +22,7 @@ Single-server-VictoriaMetrics VictoriaMetrics is available as:
 * [VictoriaMetrics on Linode](https://www.linode.com/marketplace/apps/victoriametrics/victoriametrics/)
 * [VictoriaMetrics on DigitalOcean](https://marketplace.digitalocean.com/apps/victoriametrics-single)
 
-Just download VictoriaMetrics and follow [these instructions](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-start-victoriametrics). Then read [Prometheus setup](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#prometheus-setup) and [Grafana setup](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#grafana-setup) docs.
-
-VictoriaMetrics is developed at a fast pace, so it is recommended periodically checking the [CHANGELOG](https://docs.victoriametrics.com/CHANGELOG.html) and performing [regular upgrades](https://docs.victoriametrics.com/#how-to-upgrade-victoriametrics).
+只需要下载 VictoriaMetrics 然后跟随[这些步骤](dan-ji-ban-ben.md#ru-he-yun-hang-victoriametrics)，然后阅读[Prometheus配置](dan-ji-ban-ben.md#prometheus-setup)和[Grafana配置](dan-ji-ban-ben.md#grafana-setup)文档。
 
 ### Starting VM-Single via Docker <a href="#starting-vm-single-via-docker" id="starting-vm-single-via-docker"></a>
 

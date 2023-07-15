@@ -258,9 +258,9 @@ VictoriaMetrics还与[Prometheus客户端库兼容](https://prometheus.io/docs/i
 
 ### 多租户
 
-[VictoriaMetrics的集群版本](ji-qun-mo-shi.md)支持数据隔离的多租户功能。
+[VictoriaMetrics的集群版本](ji-qun-ban-ben.md)支持数据隔离的多租户功能。
 
-对于[单机版本的VictoriaMetrics](dan-ji-mo-shi.md)，可以通过在[写入URL路径](he-xin-gai-nian.md#shu-ju-xie-ru)上添加 Label 并在[查询URL路径](he-xin-gai-nian.md#shu-ju-cha-xun)上强制进行 [Label 过滤](dan-ji-mo-shi.md#prometheus-querying-api-enhancements)来模拟多租户。
+对于[单机版本的VictoriaMetrics](dan-ji-ban-ben.md)，可以通过在[写入URL路径](he-xin-gai-nian.md#shu-ju-xie-ru)上添加 Label 并在[查询URL路径](he-xin-gai-nian.md#shu-ju-cha-xun)上强制进行 [Label 过滤](dan-ji-ban-ben.md#prometheus-querying-api-enhancements)来模拟多租户。
 
 ## 数据写入
 
@@ -292,7 +292,7 @@ VictoriaMetrics 支持当今监控应用的 2 种写入模式：Push 和 Pull。
 curl -d '{"metric":{"__name__":"foo","job":"node_exporter"},"values":[0,1,2],"timestamps":[1549891472010,1549891487724,1549891503438]}' -X POST 'http://localhost:8428/api/v1/import'
 ```
 
-允许将指标推送/写入[单机版VictoriaMetrics](dan-ji-mo-shi.md)、集群组件vminsert 和 vmagent。
+允许将指标推送/写入[单机版VictoriaMetrics](dan-ji-ban-ben.md)、集群组件vminsert 和 vmagent。
 
 Push 模型的优点：
 
@@ -316,7 +316,7 @@ Push 模型的缺点：
 
 在 Pull 模型中，监控系统需要知道所有需要监控的应用程序的地址。指标是定期从已知的应用程序（也称为抓取目标）通过HTTP协议进行抓取（拉取）。
 
-VictoriaMetrics支持发现与Prometheus兼容的目标，并以与Prometheus相同的方式从这些目标中抓取指标-请参阅[这些文档](../chang-yong-gong-neng.md#how-to-scrape-prometheus-exporters-such-as-node-exporter)。
+VictoriaMetrics支持发现与Prometheus兼容的目标，并以与Prometheus相同的方式从这些目标中抓取指标-请参阅[这些文档](broken-reference)。
 
 单机版VictoriaMetrics和vmagent都支持指标抓取。
 
@@ -711,16 +711,16 @@ VictoriaMetrics将时间序列数据存储在类似[MergeTree](https://en.wikipe
 
 ### 删除
 
-请阅读，[如何删除 Timeseries](dan-ji-mo-shi.md#ru-he-shan-chu-timeseries)。
+请阅读，[如何删除 Timeseries](dan-ji-ban-ben.md#ru-he-shan-chu-timeseries)。
 
 ### Relabeling（Label 重置）
 
-Relabeling 是在时间序列写入数据库之前修改它们的强大机制。重新标记可以应用于 Push 和 Pull 模型。更多详细信息请[参见此处](dan-ji-mo-shi.md#relabeling)。
+Relabeling 是在时间序列写入数据库之前修改它们的强大机制。重新标记可以应用于 Push 和 Pull 模型。更多详细信息请[参见此处](dan-ji-ban-ben.md#relabeling)。
 
 ### Deduplication（去重） <a href="#deduplication" id="deduplication"></a>
 
-VictoriaMetrics 支持去重，[详见文档](dan-ji-mo-shi.md#deduplication)。
+VictoriaMetrics 支持去重，[详见文档](dan-ji-ban-ben.md#deduplication)。
 
 ### Downsampling（降采样） <a href="#downsampling" id="downsampling"></a>
 
-VictoriaMetrics 支持降采样，[详见文档](dan-ji-mo-shi.md#downsampling)。
+VictoriaMetrics 支持降采样，[详见文档](dan-ji-ban-ben.md#downsampling)。

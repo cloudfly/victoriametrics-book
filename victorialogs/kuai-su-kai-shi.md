@@ -2,5 +2,5 @@
 description: VictoriaLogsLogs
 ---
 
-# 📪 关于 VictoriaLogs
+# 快速开始
 
