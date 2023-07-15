@@ -66,6 +66,16 @@ VictoriaMetrics is developed at a fast pace, so it is recommended periodically c
 
 
 
+## Timestamp 格式 <a href="#timestamp-formats" id="timestamp-formats"></a>
+
+VictoriaMetrics accepts the following formats for `time`, `start` and `end` query args in [query APIs](https://docs.victoriametrics.com/#prometheus-querying-api-usage) and in [export APIs](https://docs.victoriametrics.com/#how-to-export-time-series).
+
+* Unix timestamps in seconds with optional milliseconds after the point. For example, `1562529662.678`.
+* Unix timestamps in milliseconds. For example, `1562529662678`.
+* [RFC3339](https://www.ietf.org/rfc/rfc3339.txt). For example, `2022-03-29T01:02:03Z` or `2022-03-29T01:02:03+02:30`.
+* Partial RFC3339. Examples: `2022`, `2022-03`, `2022-03-29`, `2022-03-29T01`, `2022-03-29T01:02`, `2022-03-29T01:02:03`. The partial RFC3339 time is in UTC timezone by default. It is possible to specify timezone there by adding `+hh:mm` or `-hh:mm` suffix to partial time. For example, `2022-03-01+06:30` is `2022-03-01` at `06:30` timezone.
+* Relative duration comparing to the current time. For example, `1h5m`, `-1h5m` or `now-1h5m` means `one hour and five minutes ago`, while `now` means `now`.
+
 ## Prometheus 配置 <a href="#prometheus-setup" id="prometheus-setup"></a>
 
 Add the following lines to Prometheus config file (it is usually located at `/etc/prometheus/prometheus.yml`) in order to send data to VictoriaMetrics:

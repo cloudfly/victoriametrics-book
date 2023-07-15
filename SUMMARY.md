@@ -4,7 +4,11 @@
 
 ## VictoriaMetrics
 
-* [核心概念](victoriametrics/he-xin-gai-nian.md)
+* [核心概念](victoriametrics/he-xin-gai-nian/README.md)
+  * [数据模型](victoriametrics/he-xin-gai-nian/shu-ju-mo-xing.md)
+  * [数据写入](victoriametrics/he-xin-gai-nian/shu-ju-xie-ru.md)
+  * [数据查询](victoriametrics/he-xin-gai-nian/shu-ju-cha-xun.md)
+  * [数据修改](victoriametrics/he-xin-gai-nian/shu-ju-xiu-gai.md)
 * [快速开始](victoriametrics/kuai-su-kai-shi.md)
 * [单机版本](victoriametrics/dan-ji-ban-ben.md)
 * [集群版本](victoriametrics/ji-qun-ban-ben.md)
