@@ -76,6 +76,14 @@ VictoriaMetrics accepts the following formats for `time`, `start` and `end` quer
 * Partial RFC3339. Examples: `2022`, `2022-03`, `2022-03-29`, `2022-03-29T01`, `2022-03-29T01:02`, `2022-03-29T01:02:03`. The partial RFC3339 time is in UTC timezone by default. It is possible to specify timezone there by adding `+hh:mm` or `-hh:mm` suffix to partial time. For example, `2022-03-01+06:30` is `2022-03-01` at `06:30` timezone.
 * Relative duration comparing to the current time. For example, `1h5m`, `-1h5m` or `now-1h5m` means `one hour and five minutes ago`, while `now` means `now`.
 
+## 如何导出 time series <a href="#how-to-export-time-series" id="how-to-export-time-series"></a>
+
+VictoriaMetrics provides the following handlers for exporting data:
+
+* `/api/v1/export` for exporting data in JSON line format. See [these docs](https://docs.victoriametrics.com/#how-to-export-data-in-json-line-format) for details.
+* `/api/v1/export/csv` for exporting data in CSV. See [these docs](https://docs.victoriametrics.com/#how-to-export-csv-data) for details.
+* `/api/v1/export/native` for exporting data in native binary format. This is the most efficient format for data export. See [these docs](https://docs.victoriametrics.com/#how-to-export-data-in-native-format) for details.
+
 ## Prometheus 配置 <a href="#prometheus-setup" id="prometheus-setup"></a>
 
 Add the following lines to Prometheus config file (it is usually located at `/etc/prometheus/prometheus.yml`) in order to send data to VictoriaMetrics:
@@ -133,6 +141,12 @@ Substitute `<victoriametrics-addr>` with the hostname or IP address of VictoriaM
 Then build graphs and dashboards for the created datasource using [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/) or [MetricsQL](https://docs.victoriametrics.com/MetricsQL.html).
 
 Alternatively, use VictoriaMetrics [datasource plugin](https://github.com/VictoriaMetrics/grafana-datasource) with support of extra features. See more in [description](https://github.com/VictoriaMetrics/grafana-datasource#victoriametrics-data-source-for-grafana).
+
+## 部署运维 <a href="#operation" id="operation"></a>
+
+## 监控
+
+## 容量规划
 
 ## Relabeling <a href="#relabeling" id="relabeling"></a>
 

@@ -2,20 +2,20 @@
 
 ## 什么是 Metric（度量指标）
 
-简单来说，`metric`是对某物的数值测量或观察。
+简单来说，`metric`是对事物的数值测量或观察。
 
-度量标准最常见的用途包括：
+Metric 最常见的用途包括：
 
 * 检查系统在特定时间段内的行为；
 * 将行为变化与其他测量结果相关联；
 * 观察或预测趋势；
-* 如果度量标准超过阈值，则触发事件（警报）。
+* 如果度量标准超过阈值，则触发事件（告警）。
 
 ## Metric 的结构
 
-让我们从一个例子开始。为了追踪我们的应用程序提供了多少请求，我们将定义一个名为`requests_total`的指标。
+让我们从一个例子开始。为了追踪我们的应用程序处理了多少请求，我们将定义一个名为`requests_total`的指标。
 
-在这里你可以更具体一些，比如说`requests_success_total`（仅针对成功的请求）或者`request_errors_total`（针对失败的请求）。选择一个指标名称非常重要，它应该能够清楚地向每个阅读它的人解释实际测量到了什么内容，就像编程中的变量名一样。
+在这里你可以更具体一些，比如说`requests_success_total`（仅针对成功的请求）或者`request_errors_total`（针对失败的请求）。选择一个指标名称非常重要，它应该能够清楚地向每个看到它的人传达正确信息：实际测量到了什么内容；就像编程中的变量名一样。
 
 ### Labels（标签）
 
@@ -26,7 +26,7 @@ requests_total{path="/", code="200"}
 requests_total{path="/", code="403"} 
 ```
 
-元信息 - 一组用花括号括起来的 Labels - 为我们提供了`request`被处理的`path`和`status code`的上下文。Label 的值始终是`string`类型。VictoriaMetrics数据模型是无模式的（No Scheme），这意味着不需要预先定义指标名称或其标签。用户可以随时添加或更改已采用的指标。
+指标元信息，即一组用花括号括起来的键值对，为我们提供了`request`被处理的`path`和`status code`的上下文。Label 的值始终是`string`类型。VictoriaMetrics数据模型是无模式的（No Scheme），即没有预先定义的表结构，用户不需要预先定义指标名称或其标签，而是可以随时添加或更改已采用的指标。
 
 实际上，指标名称也是一个具有特殊名称`__name__`的 Label。因此，以下两个系列是相同的：
 
@@ -35,33 +35,33 @@ requests_total{path="/", code="200"}
 {__name__="requests_total", path="/", code="200"} 
 ```
 
-Labels可以自动附加到通过vmagent或Prometheus编写的时间序列上。VictoriaMetrics支持对查询API强制执行 Label 过滤器以模拟数据隔离。然而，真正的数据隔离可以通过多租户实现。
+Labels可以自动附加到通过vmagent或Prometheus采集的 [timeseries](shu-ju-mo-xing.md#timeseries-shi-jian-xu-lie) 上。VictoriaMetrics支持对查询API强制执行 Label 过滤器以实现数据的软隔离。然而，真正的数据隔离可以通过[多租户](shu-ju-mo-xing.md#duo-zu-hu)实现。
 
-### **Time series（时间序列）**
+### **Timeseries（时间序列）**
 
-一个指标名称和其Label的组合定义了一个时间序列。例如，`requests_total{path="/", code="200"}` 和 `requests_total{path="/", code="403"}` 是两个不同的时间序列，因为它们在`code`标签上有不同的值。
+一个指标名称和其Label的组合定义了一个 timeseries。例如，`requests_total{path="/", code="200"}` 和 `requests_total{path="/", code="403"}` 是两个不同的 timeseries，因为它们在`code`标签上有不同的值。
 
-唯一时间序列的数量对数据库资源使用有影响。详细信息请参阅[什么是活跃时间序列](../faq.md#what-is-an-active-time-series)以及[什么是高流失率](../faq.md#gao-diu-shi-lv-shi-zhi-shen-me)。
+唯一时间序列的数量对数据库资源用量产生影响。详细信息请参阅[什么是活跃时间序列](../faq.md#what-is-an-active-time-series)以及[什么是高流失率](../faq.md#gao-diu-shi-lv-shi-zhi-shen-me)。
 
 ### **Cardinality（基数）**
 
-唯一时间序列的数量被称为基数。过多的唯一时间序列被称为高基数。高基数可能导致在VictoriaMetrics中增加资源使用量。请参阅[这篇文档](../faq.md#shen-me-shi-gao-ji-shu)以获取更多详细信息。
+唯一时间序列的数量被称为基数。过多的唯一时间序列被称为[高基数](../faq.md#shen-me-shi-gao-ji-shu)。高基数可能导致在VictoriaMetrics中增加资源使用量。请参阅[这篇文档](../faq.md#shen-me-shi-gao-ji-shu)以获取更多详细信息。
 
 ### Raw samples（原始样本）
 
 每个唯一的时间序列可以由任意数量的`（value，timestamp）`数据点（也称为`原始样本`）组成，它们按照`timestamp`排序。`value`是[双精度浮点数](https://en.wikipedia.org/wiki/Double-precision\_floating-point\_format)。`timestamp`是具有毫秒精度的[Unix时间戳](https://en.wikipedia.org/wiki/Unix\_time)。
 
-以下是一个 [Prometheus 文本格式](https://github.com/prometheus/docs/blob/main/content/docs/instrumenting/exposition\_formats.md#text-based-format) 的单个原始样本的示例：
+以下是一个[Prometheus文本格式](https://github.com/prometheus/docs/blob/main/content/docs/instrumenting/exposition\_formats.md#text-based-format)的单个原始样本的示例：
 
 ```promql
 requests_total{path="/", code="200"} 123 4567890
 ```
 
-* `requests_total{path="/", code="200"}` 用于标识给定样本的相关时间序列。&#x20;
+* `requests_total{path="/", code="200"}` 用于标识给定样本的相关 timeseries。&#x20;
 * `123` 是一个样本值。&#x20;
-* `4567890` 是可选的样本时间戳。如果缺失，则在将样本存储到VictoriaMetrics中时使用当前时间戳。
+* `4567890` 是可选的样本时间戳。如果缺失，则数据被存储到VictoriaMetrics中时使用数据库的当前时间戳。
 
-### **Time series resolution（时间序列分辨率）**
+### **Timeseries resolution（时间序列分辨率）**
 
 分辨率是 [timeseries](shu-ju-mo-xing.md#time-series-shi-jian-xu-lie) 的 [samples](shu-ju-mo-xing.md#raw-samples-yuan-shi-yang-ben) 之间的最小间隔。考虑以下示例：
 
@@ -75,11 +75,11 @@ requests_total{path="/", code="200"} 123 4567890
 ....
 ```
 
-这里有一个时间序列请求总数`{path="/health", code="200"}`，每30秒更新一次值。这意味着它的分辨率也是30秒。
+这里有一个代表请求总数的 timeseries`{path="/health", code="200"}`，每30秒更新一次值。这意味着它的分辨率也是30秒。
 
-在拉取模式中，分辨率等于抓取间隔，并由监控系统（服务器）控制。对于推送模式，分辨率是样本时间戳之间的间隔，并由客户端（指标收集器）控制。
+在[Pull模式](shu-ju-xie-ru.md#pull-mo-xing)中，分辨率等于抓取间隔，并由监控系统（服务器）控制。对于[Push模式](shu-ju-xie-ru.md#push-mo-xing)，分辨率是样本时间戳之间的间隔，并由客户端（指标收集器）控制。
 
-尽量保持时间序列的分辨率一致，因为某些[MetricsQL](../metricql.md)函数可能期望如此
+尽量保持时间序列的分辨率一致，因为某些[MetricsQL](../metricql/)函数可能期望如此，以免计算出『奇怪』的结果。
 
 ## Metric 类型
 
@@ -95,7 +95,7 @@ requests_total{path="/", code="200"} 123 4567890
 
 `vm_http_requests_total` 是一个典型的 Counter 示例。上面图表的解释是，时间序列 `vm_http_requests_total{instance="localhost:8428", job="victoriametrics", path="api/v1/query_range"}` 在下午1点38分到1点39分之间迅速变化，然后在1点41分之前没有任何变化。
 
-Counter 用于测量事件数量，例如请求、错误、日志、消息等。与计数器一起使用最常见的 [MetricsQL](../metricql.md) 函数有：
+`Counter`用于测量事件数量，例如请求、错误、日志、消息等。与计数器一起使用最常见的 [MetricsQL](../metricql/) 函数有：
 
 * `rate` - 计算指标每秒平均变化速度。例如，`rate(requests_total)` 显示平均每秒服务多少个请求；
 * `increase` - 计算给定时间段内指标的增长情况，时间段由方括号中指定。例如，`increase(requests_total[1h])` 显示过去一小时内服务的请求数量。
@@ -118,11 +118,11 @@ Gauge 用于测量可以上下变化的值：
 * 存储某个过程的状态。例如，如果配置重新加载成功，则可以将 gauge `config_reloaded_successful` 设置为 `1`；如果配置重新加载失败，则设置为 `0`；
 * 存储事件发生时的时间戳。例如，`config_last_reload_success_timestamp_seconds` 可以存储最后一次成功配置重新加载的时间戳。
 
-与 gauges 最常用的 [MetricsQL](../metricql.md) 函数是聚合函数和滚动函数。
+与 gauges 最常用的 [MetricsQL](../metricql/) 函数是聚合函数和滚动函数。
 
 ### **Histogram（直方图）**
 
-Histogram 是一组具有不同`vmrange`或`le`标签的 Counter 指标。 `vmrange`或`le`标签定义了特定`bucket`（桶）的测量边界。当观察到的测量值命中特定的`bucket`时，相应的Counter会递增。
+Histogram 是一组具有不同`vmrange`或`le`标签的 Counter 指标。 `vmrange`或`le`标签定义了特定`bucket`（桶）的测量边界。当观察到的测量值命中特定的`bucket`时，相应的`Counter`会递增。
 
 直方图桶通常在其名称中带有`_bucket`后缀。例如，VictoriaMetrics使用`vm_rows_read_per_query`直方图跟踪每个查询处理的行分布情况。该 Histogram 的暴露格式如下：
 
@@ -184,7 +184,7 @@ for _, query := range queries {
 
 <figure><img src="../../.gitbook/assets/image (1) (1).png" alt=""><figcaption></figcaption></figure>
 
-Grafana对带有vmrange标签的桶不理解，因此在构建Grafana中的热力图之前，必须使用[prometheus\_buckets](../metricql.md)函数将带有`vmrange`标签的桶转换为带有`le`标签的桶。
+Grafana对带有vmrange标签的桶不理解，因此在构建Grafana中的热力图之前，必须使用[prometheus\_buckets](../metricql/)函数将带有`vmrange`标签的桶转换为带有`le`标签的桶。
 
 histogram 通常用于测量延迟分布、元素大小（例如批处理大小）等。VictoriaMetrics支持两种直方图实现：
 
@@ -214,7 +214,7 @@ go_gc_duration_seconds_count 83
 
 Summary 的可视化非常直观：
 
-<figure><img src="../../.gitbook/assets/image (3) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (3) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 这种方法使得 Summary 更易于使用，但与 Histogram 相比也存在显著的限制：
 
@@ -226,7 +226,7 @@ Summary 通常用于跟踪延迟、元素大小（例如批处理大小）等预
 
 ## 使用 Metric 对应用进行观测
 
-正如在[Metric类型](shu-ju-mo-xing.md#types-of-metrics)部分的开头所说，Metric类型定义了它是如何被测量的。VictoriaMetrics TSDB并不知道Metric类型。它只看到Metric的名称、Label、Value和 Timestamp。这些 Metric 是什么，它们衡量什么以及如何衡量 - 这一切都取决于发出这些指标的应用程序。
+正如在[Metric类型](shu-ju-mo-xing.md#types-of-metrics)部分的开头所说，Metric类型定义了它是如何被测量的。VictoriaMetrics TSDB并不认识Metric类型。它只看到Metric的名称、Label、Value和 Timestamp。这些 Metric 是什么，它们衡量什么以及如何衡量 - 这一切都取决于发出这些指标的应用程序。
 
 为了使用与VictoriaMetrics兼容的Metric来监控您的应用程序，我们建议使用[github.com/VictoriaMetrics/metrics](https://github.com/VictoriaMetrics/metrics)包。
 
@@ -234,13 +234,13 @@ VictoriaMetrics还与[Prometheus客户端库兼容](https://prometheus.io/docs/i
 
 ### 命名
 
-我们建议遵循[Prometheus的指标命名规范](https://prometheus.io/docs/practices/naming/)。对于VictoriaMetrics来说，没有严格的限制，所以任何指标名称和标签都是可以接受的。但是遵循这个约定有助于保持名称有意义、描述性强，并且清晰易懂给其他人。遵循这个约定是一个好习惯。
+我们建议遵循[Prometheus的指标命名规范](https://prometheus.io/docs/practices/naming/)。对于VictoriaMetrics来说，没有严格的限制，所以任何指标名称和Label名称都是可以接受的。但是遵循这个约定有助于保持名称有意义、描述性强，并且清晰易懂给其他人。遵循这个约定是一个好习惯。
 
 ### Label
 
-每个测量值都可以包含任意数量的`key="value"`标签。良好的实践是保持这个数量有限。否则，处理包含大量标签的测量将会很困难。默认情况下，VictoriaMetrics将每个测量值的标签数限制为`30`，并丢弃其他标签。如果需要，可以通过`-maxLabelsPerTimeseries`命令行参数来更改此限制（但不建议这样做）。
+每个 Metric 都可以包含任意数量的`key="value"`标签。良好的实践是保持这个数量可控。否则，处理包含大量Label的数据将会很困难。默认情况下，VictoriaMetrics将每个Metric的Label数限制为`30`，并丢弃其他标签。如果需要，可以通过`-maxLabelsPerTimeseries`命令行参数来更改此限制（但不建议这样做）。
 
-每个标签值都可以包含任意字符串值。良好的实践是使用简短而有意义的标签值来描述指标属性，而不是讲述它们的故事。例如，label-value对environment="prod"是可以接受的，但`log_message="long log message with a lot of details..."`就不可接受了。默认情况下，VictoriaMetrics将标签值大小限制为`16kB`。可以通过`-maxLabelValueLen`命令行参数来更改此限制。
+每个Label的值都可以包含任意字符串值。良好的实践是使用简短而有意义的标签值来描述指标属性，而不是讲述它们的故事。例如，`environment="prod"`是可以接受的正常Label，但`log_message="long log message with a lot of details..."`就不是可接受的。默认情况下，VictoriaMetrics将标签值大小限制为`16kB`。可以通过`-maxLabelValueLen`命令行参数来更改此限制（同样强烈不建议这样做）。
 
 控制唯一标签值的数量非常重要，因为每个唯一标签值都会导致一个新 [timeseries](shu-ju-mo-xing.md#time-series-shi-jian-xu-lie) 产生。尽量避免使用易变性较高的标签值（如会话ID或查询ID），以避免过多资源使用和数据库减速问题发生。
 
