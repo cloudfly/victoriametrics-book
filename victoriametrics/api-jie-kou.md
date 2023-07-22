@@ -102,3 +102,65 @@ VictoriaMetrics supports the following handlers from [Graphite Tags API](https:/
 * [/tags/autoComplete/values](https://graphite.readthedocs.io/en/stable/tags.html#auto-complete-support)
 * [/tags/delSeries](https://graphite.readthedocs.io/en/stable/tags.html#removing-series-from-the-tagdb)
 
+## 集群版
+
+The main differences between URL formats of cluster and [Single server](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html) versions are that cluster has separate components for read and ingestion path, and because of multi-tenancy support. Also in the cluster version the `/prometheus/api/v1` endpoint ingests `jsonl`, `csv`, `native` and `prometheus` data formats **not** only `prometheus` data. Check practical examples of VictoriaMetrics API [here](https://docs.victoriametrics.com/url-examples.html).
+
+* URLs for data ingestion: `http://<vminsert>:8480/insert/<accountID>/<suffix>`, where:
+  * `<accountID>` is an arbitrary 32-bit integer identifying namespace for data ingestion (aka tenant). It is possible to set it as `accountID:projectID`, where `projectID` is also arbitrary 32-bit integer. If `projectID` isn't set, then it equals to `0`. See [multitenancy docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy) for more details. The `<accountID>` can be set to `multitenant` string, e.g. `http://<vminsert>:8480/insert/multitenant/<suffix>`. Such urls accept data from multiple tenants specified via `vm_account_id` and `vm_project_id` labels. See [multitenancy via labels](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy-via-labels) for more details.
+  * `<suffix>` may have the following values:
+    * `prometheus` and `prometheus/api/v1/write` - for inserting data with [Prometheus remote write API](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#remote\_write).
+    * `prometheus/api/v1/import` - for importing data obtained via `api/v1/export` at `vmselect` (see below), JSON line format.
+    * `prometheus/api/v1/import/native` - for importing data obtained via `api/v1/export/native` on `vmselect` (see below).
+    * `prometheus/api/v1/import/csv` - for importing arbitrary CSV data. See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-import-csv-data) for details.
+    * `prometheus/api/v1/import/prometheus` - for importing data in [Prometheus text exposition format](https://github.com/prometheus/docs/blob/master/content/docs/instrumenting/exposition\_formats.md#text-based-format) and in [OpenMetrics format](https://github.com/OpenObservability/OpenMetrics/blob/master/specification/OpenMetrics.md). This endpoint also supports [Pushgateway protocol](https://github.com/prometheus/pushgateway#url). See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-import-data-in-prometheus-exposition-format) for details.
+    * `datadog/api/v1/series` - for inserting data with [DataDog submit metrics API](https://docs.datadoghq.com/api/latest/metrics/#submit-metrics). See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-send-data-from-datadog-agent) for details.
+    * `influx/write` and `influx/api/v2/write` - for inserting data with [InfluxDB line protocol](https://docs.influxdata.com/influxdb/v1.7/write\_protocols/line\_protocol\_tutorial/). See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-send-data-from-influxdb-compatible-agents-such-as-telegraf) for details.
+    * `opentsdb/api/put` - for accepting [OpenTSDB HTTP /api/put requests](http://opentsdb.net/docs/build/html/api\_http/put.html). This handler is disabled by default. It is exposed on a distinct TCP address set via `-opentsdbHTTPListenAddr` command-line flag. See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#sending-opentsdb-data-via-http-apiput-requests) for details.
+* URLs for [Prometheus querying API](https://prometheus.io/docs/prometheus/latest/querying/api/): `http://<vmselect>:8481/select/<accountID>/prometheus/<suffix>`, where:
+  * `<accountID>` is an arbitrary number identifying data namespace for the query (aka tenant)
+  * `<suffix>` may have the following values:
+    * `api/v1/query` - performs [PromQL instant query](https://docs.victoriametrics.com/keyConcepts.html#instant-query).
+    * `api/v1/query_range` - performs [PromQL range query](https://docs.victoriametrics.com/keyConcepts.html#range-query).
+    * `api/v1/series` - performs [series query](https://prometheus.io/docs/prometheus/latest/querying/api/#finding-series-by-label-matchers).
+    * `api/v1/labels` - returns a [list of label names](https://prometheus.io/docs/prometheus/latest/querying/api/#getting-label-names).
+    * `api/v1/label/<label_name>/values` - returns values for the given `<label_name>` according [to API](https://prometheus.io/docs/prometheus/latest/querying/api/#querying-label-values).
+    * `federate` - returns [federated metrics](https://prometheus.io/docs/prometheus/latest/federation/).
+    * `api/v1/export` - exports raw data in JSON line format. See [this article](https://medium.com/@valyala/analyzing-prometheus-data-with-external-tools-5f3e5e147639) for details.
+    * `api/v1/export/native` - exports raw data in native binary format. It may be imported into another VictoriaMetrics via `api/v1/import/native` (see above).
+    * `api/v1/export/csv` - exports data in CSV. It may be imported into another VictoriaMetrics via `api/v1/import/csv` (see above).
+    * `api/v1/series/count` - returns the total number of series.
+    * `api/v1/status/tsdb` - for time series stats. See [these docs](https://docs.victoriametrics.com/#tsdb-stats) for details.
+    * `api/v1/status/active_queries` - for currently executed active queries. Note that every `vmselect` maintains an independent list of active queries, which is returned in the response.
+    * `api/v1/status/top_queries` - for listing the most frequently executed queries and queries taking the most duration.
+    * `metric-relabel-debug` - for debugging [relabeling rules](https://docs.victoriametrics.com/relabeling.html).
+* URLs for [Graphite Metrics API](https://graphite-api.readthedocs.io/en/latest/api.html#the-metrics-api): `http://<vmselect>:8481/select/<accountID>/graphite/<suffix>`, where:
+  * `<accountID>` is an arbitrary number identifying data namespace for query (aka tenant)
+  * `<suffix>` may have the following values:
+    * `render` - implements Graphite Render API. See [these docs](https://graphite.readthedocs.io/en/stable/render\_api.html).
+    * `metrics/find` - searches Graphite metrics. See [these docs](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-find).
+    * `metrics/expand` - expands Graphite metrics. See [these docs](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-expand).
+    * `metrics/index.json` - returns all the metric names. See [these docs](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-index-json).
+    * `tags/tagSeries` - registers time series. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#adding-series-to-the-tagdb).
+    * `tags/tagMultiSeries` - register multiple time series. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#adding-series-to-the-tagdb).
+    * `tags` - returns tag names. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#exploring-tags).
+    * `tags/<tag_name>` - returns tag values for the given `<tag_name>`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#exploring-tags).
+    * `tags/findSeries` - returns series matching the given `expr`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#exploring-tags).
+    * `tags/autoComplete/tags` - returns tags matching the given `tagPrefix` and/or `expr`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#auto-complete-support).
+    * `tags/autoComplete/values` - returns tag values matching the given `valuePrefix` and/or `expr`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#auto-complete-support).
+    * `tags/delSeries` - deletes series matching the given `path`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#removing-series-from-the-tagdb).
+* URL with basic Web UI: `http://<vmselect>:8481/select/<accountID>/vmui/`.
+* URL for query stats across all tenants: `http://<vmselect>:8481/api/v1/status/top_queries`. It lists with the most frequently executed queries and queries taking the most duration.
+* URL for time series deletion: `http://<vmselect>:8481/delete/<accountID>/prometheus/api/v1/admin/tsdb/delete_series?match[]=<timeseries_selector_for_delete>`. Note that the `delete_series` handler should be used only in exceptional cases such as deletion of accidentally ingested incorrect time series. It shouldn't be used on a regular basis, since it carries non-zero overhead.
+* URL for listing [tenants](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy) with the ingested data on the given time range: `http://<vmselect>:8481/admin/tenants?start=...&end=...` . The `start` and `end` query args are optional. If they are missing, then all the tenants with at least one sample stored in VictoriaMetrics are returned.
+* URL for accessing [vmalerts](https://docs.victoriametrics.com/vmalert.html) UI: `http://<vmselect>:8481/select/<accountID>/prometheus/vmalert/`. This URL works only when `-vmalert.proxyURL` flag is set. See more about vmalert [here](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#vmalert).
+*   `vmstorage` nodes provide the following HTTP endpoints on `8482` port:
+
+    * `/internal/force_merge` - initiate [forced compactions](https://docs.victoriametrics.com/#forced-merge) on the given `vmstorage` node.
+    * `/snapshot/create` - create [instant snapshot](https://medium.com/@valyala/how-victoriametrics-makes-instant-snapshots-for-multi-terabyte-time-series-data-e1f3fb0e0282), which can be used for backups in background. Snapshots are created in `<storageDataPath>/snapshots` folder, where `<storageDataPath>` is the corresponding command-line flag value.
+    * `/snapshot/list` - list available snapshots.
+    * `/snapshot/delete?snapshot=<id>` - delete the given snapshot.
+    * `/snapshot/delete_all` - delete all the snapshots.
+
+    Snapshots may be created independently on each `vmstorage` node. There is no need in synchronizing snapshots' creation across `vmstorage` nodes.
+
