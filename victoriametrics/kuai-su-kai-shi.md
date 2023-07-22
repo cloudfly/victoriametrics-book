@@ -1,7 +1,3 @@
----
-description: 原文地址：https://docs.victoriametrics.com/Quick-Start.html
----
-
 # 快速开始
 
 ## 如何安装 <a href="#how-to-install" id="how-to-install"></a>

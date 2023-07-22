@@ -20,7 +20,7 @@ VictoriaMetrics 支持当今监控应用的 2 种主流写入模式：Push 和 P
 * [JSON line format](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-import-data-in-json-line-format).
 * [Arbitrary CSV data](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-import-csv-data).
 
-所有协议都与VictoriaMetrics[数据模型](shu-ju-mo-xing.md)完全兼容，可以在生产环境中使用。我们建议使用[`github.com/VictoriaMetrics/metrics`](https://github.com/VictoriaMetrics/metrics)包将应用程序指标推送到VictoriaMetrics。还可以使用已经存在的与上述协议兼容的客户端，例如Telegraf用于InfluxDB line protocol。
+所有协议都与VictoriaMetrics[数据模型](shu-ju-mo-xing.md)完全兼容，可以在生产环境中使用。我们建议使用[`github.com/VictoriaMetrics/metrics`](https://github.com/VictoriaMetrics/metrics)包将应用程序指标推送到VictoriaMetrics。还可以使用已经存在的与上述协议兼容的客户端，例如`Telegraf`用的 InfluxDB line protocol。
 
 创建自定义客户端或为指标编写应用程序非常简单，只需发送一个POST请求即可：
 
