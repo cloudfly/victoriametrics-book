@@ -79,7 +79,7 @@ vi $SNAP_DATA/var/snap/victoriametrics/current/etc/victoriametrics-scrape-config
 
 上面步骤完成后， 使用命令 `curl 127.0.0.1:8428/-/reload`触发一下配置中心加载。
 
-## 升级 VictoriaMetrics
+### 升级 VictoriaMetrics
 
 除非[发布说明](https://github.com/VictoriaMetrics/VictoriaMetrics/releases)另有说明，升级VictoriaMetrics到新版本是安全的。在升级过程中跳过多个版本也是安全的，除非[发布说明](https://github.com/VictoriaMetrics/VictoriaMetrics/releases)另有说明。建议定期升级到最新版本，因为它可能包含重要的错误修复、性能优化或新功能。&#x20;
 
@@ -113,7 +113,7 @@ ARM 的构建可以在树莓派或 [energy-efficient ARM servers](https://blog.c
 
 #### Development ARM build <a href="#development-arm-build" id="development-arm-build"></a>
 
-1. [Install Go](https://golang.org/doc/install). The minimum supported version is Go 1.19.
+1. [Install Go](https://golang.org/doc/install). 要求最低版本是 Go 1.19。
 2. Run `make victoria-metrics-linux-arm` or `make victoria-metrics-linux-arm64` from the root folder of [the repository](https://github.com/VictoriaMetrics/VictoriaMetrics). It builds `victoria-metrics-linux-arm` or `victoria-metrics-linux-arm64` binary respectively and puts it into the `bin` folder.
 
 #### Production ARM build <a href="#production-arm-build" id="production-arm-build"></a>
@@ -187,22 +187,22 @@ VictoriaMetrics不支持无限保留时间，但您可以指定一个任意长�
 
 默认情况下，VictoriaMetrics针对典型工作负载进行了优化，以实现最佳资源使用。某些工作负载可能需要细粒度的资源使用限制。在这些情况下，以下命令行标志可能会有用：
 
-* `-memory.allowedPercent` and `-memory.allowedBytes` limit the amounts of memory, which may be used for various internal caches at VictoriaMetrics. Note that VictoriaMetrics may use more memory, since these flags don't limit additional memory, which may be needed on a per-query basis.
-* `-search.maxMemoryPerQuery` limits the amounts of memory, which can be used for processing a single query. Queries, which need more memory, are rejected. Heavy queries, which select big number of time series, may exceed the per-query memory limit by a small percent. The total memory limit for concurrently executed queries can be estimated as `-search.maxMemoryPerQuery` multiplied by `-search.maxConcurrentRequests`.
-* `-search.maxUniqueTimeseries` limits the number of unique time series a single query can find and process. VictoriaMetrics keeps in memory some metainformation about the time series located by each query and spends some CPU time for processing the found time series. This means that the maximum memory usage and CPU usage a single query can use is proportional to `-search.maxUniqueTimeseries`.
-* `-search.maxQueryDuration` limits the duration of a single query. If the query takes longer than the given duration, then it is canceled. This allows saving CPU and RAM when executing unexpected heavy queries.
-* `-search.maxConcurrentRequests` limits the number of concurrent requests VictoriaMetrics can process. Bigger number of concurrent requests usually means bigger memory usage. For example, if a single query needs 100 MiB of additional memory during its execution, then 100 concurrent queries may need `100 * 100 MiB = 10 GiB` of additional memory. So it is better to limit the number of concurrent queries, while suspending additional incoming queries if the concurrency limit is reached. VictoriaMetrics provides `-search.maxQueueDuration` command-line flag for limiting the max wait time for suspended queries. See also `-search.maxMemoryPerQuery` command-line flag.
-* `-search.maxSamplesPerSeries` limits the number of raw samples the query can process per each time series. VictoriaMetrics sequentially processes raw samples per each found time series during the query. It unpacks raw samples on the selected time range per each time series into memory and then applies the given [rollup function](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions). The `-search.maxSamplesPerSeries` command-line flag allows limiting memory usage in the case when the query is executed on a time range, which contains hundreds of millions of raw samples per each located time series.
-* `-search.maxSamplesPerQuery` limits the number of raw samples a single query can process. This allows limiting CPU usage for heavy queries.
-* `-search.maxPointsPerTimeseries` limits the number of calculated points, which can be returned per each matching time series from [range query](https://docs.victoriametrics.com/keyConcepts.html#range-query).
-* `-search.maxPointsSubqueryPerTimeseries` limits the number of calculated points, which can be generated per each matching time series during [subquery](https://docs.victoriametrics.com/MetricsQL.html#subqueries) evaluation.
-* `-search.maxSeriesPerAggrFunc` limits the number of time series, which can be generated by [MetricsQL aggregate functions](https://docs.victoriametrics.com/MetricsQL.html#aggregate-functions) in a single query.
-* `-search.maxSeries` limits the number of time series, which may be returned from [/api/v1/series](https://prometheus.io/docs/prometheus/latest/querying/api/#finding-series-by-label-matchers). This endpoint is used mostly by Grafana for auto-completion of metric names, label names and label values. Queries to this endpoint may take big amounts of CPU time and memory when the database contains big number of unique time series because of [high churn rate](https://docs.victoriametrics.com/FAQ.html#what-is-high-churn-rate). In this case it might be useful to set the `-search.maxSeries` to quite low value in order limit CPU and memory usage.
-* `-search.maxTagKeys` limits the number of items, which may be returned from [/api/v1/labels](https://prometheus.io/docs/prometheus/latest/querying/api/#getting-label-names). This endpoint is used mostly by Grafana for auto-completion of label names. Queries to this endpoint may take big amounts of CPU time and memory when the database contains big number of unique time series because of [high churn rate](https://docs.victoriametrics.com/FAQ.html#what-is-high-churn-rate). In this case it might be useful to set the `-search.maxTagKeys` to quite low value in order to limit CPU and memory usage.
-* `-search.maxTagValues` limits the number of items, which may be returned from [/api/v1/label/…/values](https://prometheus.io/docs/prometheus/latest/querying/api/#querying-label-values). This endpoint is used mostly by Grafana for auto-completion of label values. Queries to this endpoint may take big amounts of CPU time and memory when the database contains big number of unique time series because of [high churn rate](https://docs.victoriametrics.com/FAQ.html#what-is-high-churn-rate). In this case it might be useful to set the `-search.maxTagValues` to quite low value in order to limit CPU and memory usage.
-* `-search.maxTagValueSuffixesPerSearch` limits the number of entries, which may be returned from `/metrics/find` endpoint. See [Graphite Metrics API usage docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#graphite-metrics-api-usage).
+* `-memory.allowedPercent` 和 `-memory.allowedBytes` 限制 VictoriaMetrics 内部缓存使用的内存量。请注意，VictoriaMetrics 可能会使用更多的内存，因为这些标志不限制每个查询所需的额外内存。
+* `-search.maxMemoryPerQuery` 限制了用于处理单个查询的内存量。需要更多内存的查询将被拒绝。选择大量时间序列的重型查询可能会略微超过每个查询的内存限制。同时执行的查询的总内存限制可以估计为`-search.maxMemoryPerQuery`乘以`-search.maxConcurrentRequests`。
+* `-search.maxUniqueTimeseries` 限制了单个查询可以找到和处理的唯一时间序列的数量。VictoriaMetrics在内存中保留有关每个查询定位到的时间序列的一些元信息，并花费一些CPU时间来处理找到的时间序列。这意味着单个查询可以使用的最大内存使用量和CPU使用量与`-search.maxUniqueTimeseries`成比例。
+* `-search.maxQueryDuration` 限制了单个查询的持续时间。如果查询超过给定的持续时间，那么它将被取消。这样可以在执行意外繁重的查询时节省CPU和内存。
+* `-search.maxConcurrentRequests` 限制了VictoriaMetrics可以处理的并发请求数量。更多的并发请求通常意味着更大的内存使用量。例如，如果单个查询在执行过程中需要100 MiB的额外内存，则可能需要100个并发查询需要`100 * 100 MiB = 10 GiB` 的额外内存。因此，在达到并发限制时，最好限制并发查询的数量，并暂停进入的附加查询。VictoriaMetrics提供了`-search.maxQueueDuration`命令行标志来限制挂起查询的最长等待时间。另请参阅`-search.maxMemoryPerQuery`命令行标志。
+* `-search.maxSamplesPerSeries` 每个时间序列查询可以处理的原始样本数量。VictoriaMetrics在查询期间按顺序处理每个找到的时间序列的原始样本。它将所选时间范围内每个时间序列的原始样本解压缩到内存中，然后应用给定的[汇总函数](metricql/functions.md)。当查询在包含数亿条原始样本的时间范围上执行时，`-search.maxSamplesPerSeries`命令行标志允许限制内存使用量。
+* `-search.maxSamplesPerQuery` 限制单个查询可以处理的原始样本数量。这样可以限制重负载查询的CPU使用率。
+* `-search.maxPointsPerTimeseries` 限制每个范围查询匹配时间序列返回的计算点数。
+* `-search.maxPointsSubqueryPerTimeseries`限制了在子查询评估过程中，每个匹配时间序列可以生成的计算点数。
+* `-search.maxSeriesPerAggrFunc` 限制了在单个查询中由[MetricsQL聚合函数](https://docs.victoriametrics.com/MetricsQL.html#aggregate-functions)生成的时间序列数量。
+* `-search.maxSeries` 限制了从[`/api/v1/series`](https://prometheus.io/docs/prometheus/latest/querying/api/#finding-series-by-label-matchers)返回的时间序列数量。这个端点主要被Grafana用于自动完成指标名称、标签名称和标签值。当数据库包含大量唯一时间序列时，对该端点的查询可能会消耗大量的CPU时间和内存，因为存在[高频率变化](https://docs.victoriametrics.com/FAQ.html#what-is-high-churn-rate)。在这种情况下，将`-search.maxSeries`设置为较低的值可能有助于限制CPU和内存使用。
+* `-search.maxTagKeys` 限制从[`/api/v1/labels`](https://prometheus.io/docs/prometheus/latest/querying/api/#getting-label-names)返回的项目数量。此端点主要用于Grafana自动完成标签名称。当数据库包含大量唯一时间序列时，对此端点的查询可能会消耗大量的CPU时间和内存，因为存在[高频率变化](https://docs.victoriametrics.com/FAQ.html#what-is-high-churn-rate)。在这种情况下，将-search.maxTagKeys设置为较低值可能有助于限制CPU和内存使用。
+* `-search.maxTagValues` 限制从[`/api/v1/label/.../values`](https://prometheus.io/docs/prometheus/latest/querying/api/#querying-label-values)返回的项目数量。此端点主要用于Grafana自动完成标签值。由于[高频率更改](https://docs.victoriametrics.com/FAQ.html#what-is-high-churn-rate)，当数据库包含大量唯一时间序列时，对该端点的查询可能会消耗大量CPU时间和内存。在这种情况下，将`-search.maxTagValues`设置为较低的值可能有助于限制CPU和内存使用。
+* `-search.maxTagValueSuffixesPerSearch` 限制了从`/metrics/find`端点返回的条目数量。请参阅[Graphite Metrics API使用文档](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#graphite-metrics-api-usage)。
 
-See also [cardinality limiter](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#cardinality-limiter) and [capacity planning docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#capacity-planning).
+参见 [cardinality limiter](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#cardinality-limiter) and [capacity planning docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#capacity-planning).
 
 ### 高可用 <a href="#high-availability" id="high-availability"></a>
 
@@ -367,7 +367,7 @@ curl http://<victoriametrics-addr>:8428/api/v1/export -d 'match[]=<timeseries_se
 在向`/api/v1/export`发送请求时，请传递`Accept-Encoding: gzip` HTTP头部，以便在导出大量时间序列数据时减少网络带宽。这将为导出的数据启用gzip压缩。以下是导出gzipped数据的示例：
 
 ```
-Copycurl -H 'Accept-Encoding: gzip' http://localhost:8428/api/v1/export -d 'match[]={__name__!=""}' > data.jsonl.gz
+curl -H 'Accept-Encoding: gzip' http://localhost:8428/api/v1/export -d 'match[]={__name__!=""}' > data.jsonl.gz
 ```
 
 每个对`/api/v1/export`的请求的最长持续时间受`-search.maxExportDuration`命令行标志限制。
@@ -658,19 +658,19 @@ VictoriaMetrics 支持使用 [vmbackup](https://docs.victoriametrics.com/vmbacku
 
 ### 去重特性 <a href="#deduplication" id="deduplication"></a>
 
-VictoriaMetrics leaves a single [raw sample](https://docs.victoriametrics.com/keyConcepts.html#raw-samples) with the biggest [timestamp](https://en.wikipedia.org/wiki/Unix\_time) for each [time series](https://docs.victoriametrics.com/keyConcepts.html#time-series) per each `-dedup.minScrapeInterval` discrete interval if `-dedup.minScrapeInterval` is set to positive duration. For example, `-dedup.minScrapeInterval=60s` would leave a single raw sample with the biggest timestamp per each discrete `60s` interval. This aligns with the [staleness rules in Prometheus](https://prometheus.io/docs/prometheus/latest/querying/basics/#staleness).
+VictoriaMetrics每个时间序列在每个`-dedup.minScrapeInterval`离散间隔内只保留一个具有最大时间戳的原始样本，如果`-dedup.minScrapeInterval`设置为正持续时间。例如，`-dedup.minScrapeInterval=60s`将在每个离散的60秒间隔内保留一个具有最大时间戳的原始样本。这与[Prometheus中的过期规则](https://prometheus.io/docs/prometheus/latest/querying/basics/#staleness)相一致。
 
-If multiple raw samples have **the same timestamp** on the given `-dedup.minScrapeInterval` discrete interval, then the sample with **the biggest value** is kept.
+如果给定的`-dedup.minScrapeInterval`离散间隔上有多个具有相同时间戳的原始样本，则保留值最大的样本。
 
-Please note, [labels](https://docs.victoriametrics.com/keyConcepts.html#labels) of raw samples should be identical in order to be deduplicated. For example, this is why [HA pair of vmagents](https://docs.victoriametrics.com/vmagent.html#high-availability) needs to be identically configured.
+请注意，要进行去重操作，原始样本的标签必须完全相同。例如，这就是为什么[vmagents HA](https://docs.victoriametrics.com/vmagent.html#high-availability)对需要配置完全相同。
 
-The `-dedup.minScrapeInterval=D` is equivalent to `-downsampling.period=0s:D` if [downsampling](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#downsampling) is enabled. So it is safe to use deduplication and downsampling simultaneously.
+如果启用了降采样功能，则`-dedup.minScrapeInterval=D`等效于`-downsampling.period=0s:D`。因此可以同时使用去重和[降采样](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#downsampling)而不会出现问题。
 
-The recommended value for `-dedup.minScrapeInterval` must equal to `scrape_interval` config from Prometheus configs. It is recommended to have a single `scrape_interval` across all the scrape targets. See [this article](https://www.robustperception.io/keep-it-simple-scrape\_interval-id) for details.
+建议将 `-dedup.minScrapeInterval` 的推荐值设置为 Prometheus 配置文件中 `scrape_interval` 的值。建议所有抓取目标都使用统一的抓取间隔，请参阅详细信息[文章](https://www.robustperception.io/keep-it-simple-scrape\_interval-id)。
 
-The de-duplication reduces disk space usage if multiple **identically configured** [vmagent](https://docs.victoriametrics.com/vmagent.html) or Prometheus instances in HA pair write data to the same VictoriaMetrics instance. These vmagent or Prometheus instances must have **identical** `external_labels` section in their configs, so they write data to the same time series. See also [how to set up multiple vmagent instances for scraping the same targets](https://docs.victoriametrics.com/vmagent.html#scraping-big-number-of-targets).
+通过去重操作可以减少磁盘空间占用量，特别是当多个**配置完全相同**的 vmagent 或 Prometheus 实例以 HA 对形式写入数据到同一个 VictoriaMetrics 实例时更加有效。这些 vmagent 或 Prometheus 实例必须在其配置文件中具有**相同的** `external_labels` 部分，以便将数据写入同一个时间序列。另请参阅[如何设置多个 vmagent 实例来抓取相同目标](https://docs.victoriametrics.com/vmagent.html#scraping-big-number-of-targets)。
 
-It is recommended passing different `-promscrape.cluster.name` values to each distinct HA pair of `vmagent` instances, so the de-duplication consistently leaves samples for one `vmagent` instance and removes duplicate samples from other `vmagent` instances. See [these docs](https://docs.victoriametrics.com/vmagent.html#high-availability) for details.
+建议为每个不同的 vmagent HA 对实例传递不同的 `-promscrape.cluster.name` 值，这样去重操作就会一致地保留一个 vmagent 实例的样本，并从其他 `vmagent` 实例中删除重复样本。请参阅[详细文档](https://docs.victoriametrics.com/vmagent.html#high-availability)了解更多信息。
 
 ### Storage <a href="#storage" id="storage"></a>
 
@@ -867,32 +867,6 @@ Explicitly set internal network interface for TCP and UDP ports for data ingesti
 
 ## 其他 <a href="#benchmarks" id="benchmarks"></a>
 
-### 常见问题 <a href="#troubleshooting" id="troubleshooting"></a>
-
-* It is recommended to use default command-line flag values (i.e. don't set them explicitly) until the need of tweaking these flag values arises.
-* It is recommended inspecting logs during troubleshooting, since they may contain useful information.
-* It is recommended upgrading to the latest available release from [this page](https://github.com/VictoriaMetrics/VictoriaMetrics/releases), since the encountered issue could be already fixed there.
-* It is recommended to have at least 50% of spare resources for CPU, disk IO and RAM, so VictoriaMetrics could handle short spikes in the workload without performance issues.
-* VictoriaMetrics requires free disk space for [merging data files to bigger ones](https://medium.com/@valyala/how-victoriametrics-makes-instant-snapshots-for-multi-terabyte-time-series-data-e1f3fb0e0282). It may slow down when there is no enough free space left. So make sure `-storageDataPath` directory has at least 20% of free space. The remaining amount of free space can be [monitored](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#monitoring) via `vm_free_disk_space_bytes` metric. The total size of data stored on the disk can be monitored via sum of `vm_data_size_bytes` metrics. See also `vm_merge_need_free_disk_space` metrics, which are set to values higher than 0 if background merge cannot be initiated due to free disk space shortage. The value shows the number of per-month partitions, which would start background merge if they had more free disk space.
-* VictoriaMetrics buffers incoming data in memory for up to a few seconds before flushing it to persistent storage. This may lead to the following "issues":
-  * Data becomes available for querying in a few seconds after inserting. It is possible to flush in-memory buffers to searchable parts by requesting `/internal/force_flush` http handler. This handler is mostly needed for testing and debugging purposes.
-  * The last few seconds of inserted data may be lost on unclean shutdown (i.e. OOM, `kill -9` or hardware reset). The `-inmemoryDataFlushInterval` command-line flag allows controlling the frequency of in-memory data flush to persistent storage. See [storage docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#storage) and [this article](https://valyala.medium.com/wal-usage-looks-broken-in-modern-time-series-databases-b62a627ab704) for more details.
-* If VictoriaMetrics works slowly and eats more than a CPU core per 100K ingested data points per second, then it is likely you have too many [active time series](https://docs.victoriametrics.com/FAQ.html#what-is-an-active-time-series) for the current amount of RAM. VictoriaMetrics [exposes](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#monitoring) `vm_slow_*` metrics such as `vm_slow_row_inserts_total` and `vm_slow_metric_name_loads_total`, which could be used as an indicator of low amounts of RAM. It is recommended increasing the amount of RAM on the node with VictoriaMetrics in order to improve ingestion and query performance in this case.
-* If the order of labels for the same metrics can change over time (e.g. if `metric{k1="v1",k2="v2"}` may become `metric{k2="v2",k1="v1"}`), then it is recommended running VictoriaMetrics with `-sortLabels` command-line flag in order to reduce memory usage and CPU usage.
-* VictoriaMetrics prioritizes data ingestion over data querying. So if it has no enough resources for data ingestion, then data querying may slow down significantly.
-* If VictoriaMetrics doesn't work because of certain parts are corrupted due to disk errors, then just remove directories with broken parts. It is safe removing subdirectories under `<-storageDataPath>/data/{big,small}/YYYY_MM` directories when VictoriaMetrics isn't running. This recovers VictoriaMetrics at the cost of data loss stored in the deleted broken parts. In the future, `vmrecover` tool will be created for automatic recovering from such errors.
-*   If you see gaps on the graphs, try resetting the cache by sending request to `/internal/resetRollupResultCache`. If this removes gaps on the graphs, then it is likely data with timestamps older than `-search.cacheTimestampOffset` is ingested into VictoriaMetrics. Make sure that data sources have synchronized time with VictoriaMetrics.
-
-    If the gaps are related to irregular intervals between samples, then try adjusting `-search.minStalenessInterval` command-line flag to value close to the maximum interval between samples.
-* If you are switching from InfluxDB or TimescaleDB, then it may be needed to set `-search.setLookbackToStep` command-line flag. This suppresses default gap filling algorithm used by VictoriaMetrics - by default it assumes each time series is continuous instead of discrete, so it fills gaps between real samples with regular intervals.
-* Metrics and labels leading to [high cardinality](https://docs.victoriametrics.com/FAQ.html#what-is-high-cardinality) or [high churn rate](https://docs.victoriametrics.com/FAQ.html#what-is-high-churn-rate) can be determined via [cardinality explorer](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#cardinality-explorer) and via [/api/v1/status/tsdb](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#tsdb-stats) endpoint.
-* New time series can be logged if `-logNewSeries` command-line flag is passed to VictoriaMetrics.
-* VictoriaMetrics limits the number of labels per each metric with `-maxLabelsPerTimeseries` command-line flag. This prevents from ingesting metrics with too many labels. It is recommended [monitoring](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#monitoring) `vm_metrics_with_dropped_labels_total` metric in order to determine whether `-maxLabelsPerTimeseries` must be adjusted for your workload.
-* If you store Graphite metrics like `foo.bar.baz` in VictoriaMetrics, then `{__graphite__="foo.*.baz"}` filter can be used for selecting such metrics. See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#selecting-graphite-metrics) for details.
-* VictoriaMetrics ignores `NaN` values during data ingestion.
-
-See also [troubleshooting docs](https://docs.victoriametrics.com/Troubleshooting.html).
-
 ### 压测 <a href="#benchmarks" id="benchmarks"></a>
 
 请注意，供应商（包括VictoriaMetrics在内）在进行此类测试时往往存在偏见。例如，他们会试图突出自己产品的优点，同时强调竞争产品的缺点。因此，我们鼓励用户和所有独立第三方对他们正在评估的各种产品进行生产环境下的基准测试，并公布结果。
@@ -917,4 +891,26 @@ curl http://0.0.0.0:8428/debug/pprof/profile > cpu.pprof
 
 收集 CPU 个人资料的命令会在等待 30 秒后返回。 可以使用 [go tool pprof](https://github.com/google/pprof) 分析收集到的个人资料。从安全角度来看，共享这些收集到的个人资料是安全的，因为它们不包含敏感信息。
 
-## &#x20;
+### 常见问题建议
+
+* 建议在不需要调整标志值的情况下使用默认命令行标志值（即不要显式设置它们）。
+* 建议在故障排除过程中检查日志，因为它们可能包含有用的信息。
+* 建议从此页面升级到最新可用版本，因为遇到的问题可能已经在那里修复了。
+* 建议至少保留50%的CPU、磁盘IO和RAM资源作为备用，这样VictoriaMetrics就可以处理工作负载中的短暂峰值而无性能问题。
+* VictoriaMetrics需要空闲磁盘空间将数据文件合并成更大的文件。当没有足够的剩余空间时，它可能会变慢。因此，请确保`-storageDataPath`目录至少有20%的可用空间。剩余可用空间量可以通过`vm_free_disk_space_bytes`指标进行监控。存储在磁盘上的数据总大小可以通过vm\_data\_size\_bytes指标之和进行监控。还可以查看`vm_merge_need_free_disk_space`指标，如果由于缺乏免费磁盘空间而无法启动后台合并，则其值将设置为大于0.该值显示每月分区数，在拥有更多免费磁盘空间时将启动后台合并。
+* VictoriaMetrics会将传入数据缓冲到内存中，并在几秒钟后将其刷新到持久存储中。这可能会导致以下“问题”：
+  * 插入后的几秒钟数据才能进行查询。可以通过请求`/internal/force_flush` http处理程序将内存缓冲区刷新到可搜索部分。此处理程序主要用于测试和调试目的。
+  * 在非正常关闭（即OOM、kill -9或硬件重置）时，最后几秒钟插入的数据可能会丢失。`-inmemoryDataFlushInterval`命令行标志允许控制将内存中的数据刷新到持久存储的频率。有关更多详细信息，请参阅存储文档和本文。
+* 如果VictoriaMetrics工作缓慢，并且每秒摄取100K个数据点占用超过一个CPU核心，则很可能是当前RAM量对于太多活动时间序列来说不足够了。VictoriaMetrics公开了`vm_slow_*`指标，例如`vm_slow_row_inserts_total`和`vm_slow_metric_name_loads_total`，它们可以用作RAM数量不足的指示器。建议增加节点上VictoriaMetrics所使用的RAM量以改善摄取和查询性能。
+* 如果同一度量标签顺序随时间变化（例如`metric{k1="v1",k2="v2"}`可能变为`metric{k2="v2",k1="v1"}`），则建议使用-sortLabels命令行标志运行VictoriaMetrics，以减少内存使用和CPU使用率。
+* VictoriaMetrics优先考虑数据摄取而不是数据查询。因此，如果没有足够的资源进行数据摄取，则数据查询可能会显著减慢。
+* 如果VictoriaMetrics由于磁盘错误导致某些部分损坏而无法工作，则只需删除带有损坏部分的目录即可。在VictoriaMetrics未运行时，安全地删除`<-storageDataPath>/data/{big,small}/YYYY_MM`目录下的子目录可以恢复VictoriaMetrics，但会丢失已存储在被删除损坏部分中的数据。将来将创建vmrecover工具以自动从此类错误中恢复。
+* 如果您在图表上看到间隙，请尝试通过向`/internal/resetRollupResultCache`发送请求来重置缓存。如果这样可以消除图表上的间隙，则很可能是将早于`-search.cacheTimestampOffset`时间戳的数据。
+* 如果您从InfluxDB或TimescaleDB切换过来，可能需要设置`-search.setLookbackToStep`命令行标志。这将抑制VictoriaMetrics使用的默认间隙填充算法-默认情况下，它假设每个时间序列是连续的而不是离散的，因此会用固定间隔填补真实样本之间的空白。
+* 通过[cardinality explorer](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#cardinality-explorer)和[`/api/v1/status/tsdb`](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#tsdb-stats)端点可以确定导致高基数或高变动率的指标和标签。
+* 如果要在VictoriaMetrics中记录新时间序列，请传递`-logNewSeries`命令行标志。
+* VictoriaMetrics通过`-maxLabelsPerTimeseries`命令行标志限制每个度量指标的标签数量。这可以防止摄入具有太多标签的指标。建议监视`vm_metrics_with_dropped_labels_total`度量以确定是否需要根据工作负载调整`-maxLabelsPerTimeseries`。
+* 如果您在VictoriaMetrics中存储Graphite指标（如`foo.bar.baz`），则可以使用`{__graphite__="foo.*.baz"}`过滤器选择此类指标。详细信息请参阅[相关文档](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#selecting-graphite-metrics)。
+* 在数据摄取期间，VictoriaMetrics会忽略`NaN`值。
+
+更多参见[故障排查文档](https://docs.victoriametrics.com/Troubleshooting.html)。\
