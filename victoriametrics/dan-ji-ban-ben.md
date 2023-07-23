@@ -192,7 +192,7 @@ VictoriaMetrics不支持无限保留时间，但您可以指定一个任意长�
 * `-search.maxUniqueTimeseries` 限制了单个查询可以找到和处理的唯一时间序列的数量。VictoriaMetrics在内存中保留有关每个查询定位到的时间序列的一些元信息，并花费一些CPU时间来处理找到的时间序列。这意味着单个查询可以使用的最大内存使用量和CPU使用量与`-search.maxUniqueTimeseries`成比例。
 * `-search.maxQueryDuration` 限制了单个查询的持续时间。如果查询超过给定的持续时间，那么它将被取消。这样可以在执行意外繁重的查询时节省CPU和内存。
 * `-search.maxConcurrentRequests` 限制了VictoriaMetrics可以处理的并发请求数量。更多的并发请求通常意味着更大的内存使用量。例如，如果单个查询在执行过程中需要100 MiB的额外内存，则可能需要100个并发查询需要`100 * 100 MiB = 10 GiB` 的额外内存。因此，在达到并发限制时，最好限制并发查询的数量，并暂停进入的附加查询。VictoriaMetrics提供了`-search.maxQueueDuration`命令行标志来限制挂起查询的最长等待时间。另请参阅`-search.maxMemoryPerQuery`命令行标志。
-* `-search.maxSamplesPerSeries` 每个时间序列查询可以处理的原始样本数量。VictoriaMetrics在查询期间按顺序处理每个找到的时间序列的原始样本。它将所选时间范围内每个时间序列的原始样本解压缩到内存中，然后应用给定的[汇总函数](metricql/functions.md)。当查询在包含数亿条原始样本的时间范围上执行时，`-search.maxSamplesPerSeries`命令行标志允许限制内存使用量。
+* `-search.maxSamplesPerSeries` 每个时间序列查询可以处理的原始样本数量。VictoriaMetrics在查询期间按顺序处理每个找到的时间序列的原始样本。它将所选时间范围内每个时间序列的原始样本解压缩到内存中，然后应用给定的[汇总函数](metricql/functions/)。当查询在包含数亿条原始样本的时间范围上执行时，`-search.maxSamplesPerSeries`命令行标志允许限制内存使用量。
 * `-search.maxSamplesPerQuery` 限制单个查询可以处理的原始样本数量。这样可以限制重负载查询的CPU使用率。
 * `-search.maxPointsPerTimeseries` 限制每个范围查询匹配时间序列返回的计算点数。
 * `-search.maxPointsSubqueryPerTimeseries`限制了在子查询评估过程中，每个匹配时间序列可以生成的计算点数。

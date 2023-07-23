@@ -14,11 +14,14 @@
 * [数据查询](victoriametrics/shu-ju-cha-xun.md)
 * [MetricQL](victoriametrics/metricql/README.md)
   * [基本用法](victoriametrics/metricql/ji-ben-yong-fa.md)
-  * [Functions](victoriametrics/metricql/functions.md)
+  * [Functions](victoriametrics/metricql/functions/README.md)
+    * [Rollup](victoriametrics/metricql/functions/rollup.md)
+    * [数值转换](victoriametrics/metricql/functions/shu-zhi-zhuan-huan.md)
+    * [操纵Label](victoriametrics/metricql/functions/cao-zong-label.md)
+    * [聚合计算](victoriametrics/metricql/functions/ju-he-ji-suan.md)
   * [子查询](victoriametrics/metricql/zi-cha-xun.md)
   * [对比 PromQL](victoriametrics/metricql/dui-bi-promql.md)
   * [PromQL 新手入门](victoriametrics/metricql/promql-xin-shou-ru-men.md)
-* [API 接口](victoriametrics/api-jie-kou.md)
 * [系统组件](victoriametrics/xi-tong-zu-jian/README.md)
   * [vmagent](victoriametrics/xi-tong-zu-jian/vmagent.md)
   * [vmalert](victoriametrics/xi-tong-zu-jian/vmalert.md)
@@ -37,6 +40,7 @@
 * [问题排查](victoriametrics/wen-ti-pai-cha.md)
 * [最佳实践](victoriametrics/zui-jia-shi-jian.md)
 * [FAQ](victoriametrics/faq.md)
+* [API 接口](victoriametrics/api-jie-kou.md)
 
 ## VictoriaLogs
 
