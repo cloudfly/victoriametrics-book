@@ -54,7 +54,7 @@ VictoriaMetrics 提供了 HTTP 接口来处理查询请求。这些接口会被�
 
 [MetricsQL](metricql/) - 是用来在 VictoriaMetrics 上查询数据的一种查询语言。 MetricsQL 是一个类 [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics) 的查询语言，但它拥有很多强大的处理函数和特性来处理时序数据。
 
-更多数据查询详情，请[参考这里](he-xin-gai-nian/shu-ju-cha-xun.md)。
+更多数据查询详情，请[参考这里](shu-ju-cha-xun.md)。
 
 ## 告警 <a href="#alerting" id="alerting"></a>
 

@@ -10,9 +10,9 @@ GET | POST /api/v1/query?query=...&time=...&step=...
 
 参数：
 
-* `query` - [MetricsQL](../metricql/) 语句.
-* `time` - 可选，秒级精度的 [timestamp](../dan-ji-ban-ben.md#timestamp-formats)，指定query要执行的时间位置。如果省略，`time`的默认值是 `now()` (当前UNIX时间戳). The `time` 参数支持[多种格式](../dan-ji-ban-ben.md#timestamp-formats)。
-* `step` - 可选，执行`query`时，搜索历史 [raw sample](shu-ju-mo-xing.md#raw-samples-yuan-shi-yang-ben) 的最大时间间隔。例如，请求 `/api/v1/query?query=up&step=1m` 会在 `now()` 和 `now() - 1m` 时间范围内查找指标 `up` 的 raw sample。如果省略, `step`默认为`5m` (5分钟).
+* `query` - [MetricsQL](metricql/) 语句.
+* `time` - 可选，秒级精度的 [timestamp](dan-ji-ban-ben.md#timestamp-formats)，指定query要执行的时间位置。如果省略，`time`的默认值是 `now()` (当前UNIX时间戳). The `time` 参数支持[多种格式](dan-ji-ban-ben.md#timestamp-formats)。
+* `step` - 可选，执行`query`时，搜索历史 [raw sample](he-xin-gai-nian/shu-ju-mo-xing.md#raw-samples-yuan-shi-yang-ben) 的最大时间间隔。例如，请求 `/api/v1/query?query=up&step=1m` 会在 `now()` 和 `now() - 1m` 时间范围内查找指标 `up` 的 raw sample。如果省略, `step`默认为`5m` (5分钟).
 
 为了更好的理解即时查询的工作原理，让我们从一个数据样本开始：
 
@@ -84,9 +84,9 @@ GET | POST /api/v1/query_range?query=...&start=...&end=...&step=...
 
 参数：
 
-* `query` - [MetricsQL](../metricql/) 表达式.
-* `start` - `query` 执行的时间范围的起始[时间](../dan-ji-ban-ben.md#timestamp-formats)[戳](../dan-ji-ban-ben.md#timestamp-formats)。&#x20;
-* `end` - `query` 执行的时间范围的结束[时间](../dan-ji-ban-ben.md#timestamp-formats)[戳](../dan-ji-ban-ben.md#timestamp-formats)。如果 `end` 未指定, 则默认是当前时间。
+* `query` - [MetricsQL](metricql/) 表达式.
+* `start` - `query` 执行的时间范围的起始[时间](dan-ji-ban-ben.md#timestamp-formats)[戳](dan-ji-ban-ben.md#timestamp-formats)。&#x20;
+* `end` - `query` 执行的时间范围的结束[时间](dan-ji-ban-ben.md#timestamp-formats)[戳](dan-ji-ban-ben.md#timestamp-formats)。如果 `end` 未指定, 则默认是当前时间。
 * `step` - 查询返回的数据点之间的[时间间隔](https://prometheus.io/docs/prometheus/latest/querying/basics/#time-durations)。`query` 将会在时间点 `start`, `start+step`, `start+2*step`, …, `end` 上执行。  如果 `step` 未指定，则默认是 `5m` (5 分钟).
 
 从 VictoriaMetrics 上获取指标 `foo_bar` 在时间范围 `2022-05-10 09:59:00` 到 `2022-05-10 10:17:00` 之间的值，我们的发送的 Range Query 是:
@@ -183,11 +183,11 @@ curl "http://<victoria-metrics-addr>/api/v1/query_range?query=foo_bar&step=1m&st
 
 在返回值中，VictoriaMetrics在给定的时间范围从`2022-05-10 09:59:00`到`2022-05-10 10:17:00`返回了`foo_bar`指标的17个 sample-timestamp 数据。但是，如果我们再次查看原始数据样本，我们会发现它只包含13个原始样本。这里发生的情况是范围查询实际上是在从开始到结束的时间范围上执行`1 + (end-start)/step`次即时查询。如果我们将此请求绘制在VictoriaMetrics中，则图形将显示如下：
 
-<figure><img src="../../.gitbook/assets/image (6).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (6).png" alt=""><figcaption></figcaption></figure>
 
 蓝色虚线表示瞬时查询执行的时刻。由于瞬时查询具有定位缺失点的能力，因此图表包含两种类型的数据点：`real`和`ephemeral`数据点。`ephemeral`数据点始终重复左侧最接近的原始样本（请参见上图中的红箭头）。
 
-添加`ephemeral`数据点的行为源于[Pull模型](shu-ju-xie-ru.md#pull-mo-xing)的特殊性：
+添加`ephemeral`数据点的行为源于[Pull模型](he-xin-gai-nian/shu-ju-xie-ru.md#pull-mo-xing)的特殊性：
 
 * 指标以固定间隔进行抓取。&#x20;
 * 如果监控系统过载，则可能跳过抓取。&#x20;
@@ -199,7 +199,7 @@ curl "http://<victoria-metrics-addr>/api/v1/query_range?query=foo_bar&step=1m&st
 
 Range Query主要用于绘制指定时间范围内的时间序列数据。这些查询在以下场景中非常有用：
 
-跟踪度量指标在时间间隔上的状态； 关联多个度量指标在时间间隔上的变化； 观察度量指标变化的趋势和动态。 如果您需要从VictoriaMetrics导出原始样本，请参考[export API](../dan-ji-ban-ben.md#how-to-export-time-series)。
+跟踪度量指标在时间间隔上的状态； 关联多个度量指标在时间间隔上的变化； 观察度量指标变化的趋势和动态。 如果您需要从VictoriaMetrics导出原始样本，请参考[export API](dan-ji-ban-ben.md#how-to-export-time-series)。
 
 ## 查询延时
 
@@ -209,11 +209,11 @@ Range Query主要用于绘制指定时间范围内的时间序列数据。这些
 
 以下是当 `-search.latencyOffset` 设置为 0 时可能出现问题的示例：
 
-<figure><img src="../../.gitbook/assets/image (5).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (5).png" alt=""><figcaption></figcaption></figure>
 
 当设置了该参数后，在整个 `-search.latencyOffset` 期间，VM将返回在 `-search.latencyOffset` 持续时间内收集到的最后一个度量值：
 
-<figure><img src="../../.gitbook/assets/image (4).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (4).png" alt=""><figcaption></figcaption></figure>
 
 可以通过 `latency_offset` 查询参数来覆盖每个查询基础上设置。
 

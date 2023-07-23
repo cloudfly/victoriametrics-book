@@ -1,139 +1,139 @@
 # 基本用法
 
-**Filtering**
+## **过滤器**
 
-In sections [instant query](https://docs.victoriametrics.com/keyConcepts.html#instant-query) and [range query](https://docs.victoriametrics.com/keyConcepts.html#range-query) we've already used MetricsQL to get data for metric `foo_bar`. It is as simple as just writing a metric name in the query:
+在[数据查询](../shu-ju-cha-xun.md)部分我们已经用 MetricsQL 获取了指标 `foo_bar` 的数据。只需在查询中写入指标名称，就能轻松完成：
 
 ```metricsql
 foo_bar
 ```
 
-A single metric name may correspond to multiple time series with distinct label sets. For example:
+一个简单的指标名称会得到拥有不通 label 组合的多个 timeseries 返回响应值。比如：
 
 ```metricsql
 requests_total{path="/", code="200"} 
 requests_total{path="/", code="403"} 
 ```
 
-To select only time series with specific label value specify the matching filter in curly braces:
+要选择具有特定 Label 的 timeseries，需要在花括号中指定匹配 Label  的过滤器：
 
 ```metricsql
 requests_total{code="200"} 
 ```
 
-The query above returns all time series with the name `requests_total` and label `code="200"`. We use the operator `=` to match label value. For negative match use `!=` operator. Filters also support positive regex matching via `=~` and negative regex matching via `!~`:
+上面的查询语句返回所有名字是 `requests_total` 并且 label 带有`code="200"`的所有 `timeseries`。我们用`=`运算符来匹配 label 值。对于反匹配使用`!=`运算符。过滤器也通过`=~`实现正则匹配，用`!~`实现正则反匹配。
 
 ```metricsql
 requests_total{code=~"2.*"}
 ```
 
-Filters can also be combined:
+过滤器也可以被组合使用：
 
 ```metricsql
 requests_total{code=~"200", path="/home"}
 ```
 
-The query above returns all time series with `requests_total` name, which simultaneously have labels `code="200"` and `path="/home"`.
+上面的查询返回所有名字是request\_total，同时带有 `code="200"` 和 `path="/home"` Label的所有 timeseries。
 
-**Filtering by name**
+### **使用名字过滤**
 
-Sometimes it is required to return all the time series for multiple metric names. As was mentioned in the [data model section](https://docs.victoriametrics.com/keyConcepts.html#data-model), the metric name is just an ordinary label with a special name - `__name__`. So filtering by multiple metric names may be performed by applying regexps on metric names:
+有时我们可能需要同时返回多个监控指标。就如同[数据模型](../he-xin-gai-nian/shu-ju-mo-xing.md#labels-biao-qian)中提到的，Metric 名称本质上也是一个普通的 Label 的值，其 Label 名是`__name__`。所以可以通过对 Metric 名使用正则的方式，来过滤出多个指标名的数据：
 
 ```metricsql
 {__name__=~"requests_(error|success)_total"}
 ```
 
-The query above returns series for two metrics: `requests_error_total` and `requests_success_total`.
+上面的查询语句会返回 2 个 Metric 的 timeseries：`requests_error_total` 和`requests_success_total`.
 
-**Filtering by multiple "or" filters**
+### **利用 or 使用多个过滤器**
 
-[MetricsQL](https://docs.victoriametrics.com/MetricsQL.html) supports selecting time series, which match at least one of multiple "or" filters. Such filters must be delimited by `or` inside curly braces. For example, the following query selects time series with either `{job="app1",env="prod"}` or `{job="app2",env="dev"}` labels:
+[MetricsQL](https://docs.victoriametrics.com/MetricsQL.html)  支持查询至少满足多个过滤器中的一个方式来获取 timeseries。这些过滤器必须在花括号内使用 `or` 分割。 比如，下面的查询代表查询 Label 满足 `{job="app1",env="prod"}` 或 `{job="app2",env="dev"}` 的 timeseries：
 
 ```metricsql
 {job="app1",env="prod" or job="app2",env="dev"}
 ```
 
-The number of `or` filters can be arbitrary. This functionality allows passing the selected series to [rollup functions](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions) such as [rate()](https://docs.victoriametrics.com/MetricsQL.html#rate) without the need to use [subqueries](https://docs.victoriametrics.com/MetricsQL.html#subqueries):
+过滤器的个数是没有限制的。这个功能可以对查询到的 series 直接运用 [rollup 函数](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions)（比如 [rate](https://docs.victoriametrics.com/MetricsQL.html#rate)），这样就不需要使用[子查询](https://docs.victoriametrics.com/MetricsQL.html#subqueries)了：
 
 ```metricsql
 rate({job="app1",env="prod" or job="app2",env="dev"}[5m])
 
 ```
 
-If you need to select series matching multiple filters for the same label, then it is better from performance PoV to use regexp filter `{label=~"value1|...|valueN"}` instead of `{label="value1" or ... or label="valueN"}`.
+如果你需要对同一Label使用多个过滤器来查询 timeseries，从性能角度来看，最好使用正则表达式`{label=~"value1|...|valueN"}` 而不是使用`{label="value1" or ... or label="valueN"}`。
 
-**Arithmetic operations**
+## 算数运算
 
-MetricsQL supports all the basic arithmetic operations:
+MetricsQL 支持所有基本的算数运算：
 
-* addition - `+`
-* subtraction - `-`
-* multiplication - `*`
-* division - `/`
-* modulo - `%`
-* power - `^`
+* 加法 - `+`
+* 减法 - `-`
+* 乘法 - `*`
+* 除法 - `/`
+* 取模 - `%`
+* 指数 - `^`
 
-This allows performing various calculations across multiple metrics. For example, the following query calculates the percentage of error requests:
+我们可以在多个指标之间进行各种计算。比如，下面的查询语句就是计算错误请求率：
 
 ```metricsql
 (requests_error_total / (requests_error_total + requests_success_total)) * 100
 ```
 
-**Combining multiple series**
+### 合并多个 timeseries
 
-Combining multiple time series with arithmetic operations requires an understanding of matching rules. Otherwise, the query may break or may lead to incorrect results. The basics of the matching rules are simple:
+要使用算术运算合并多个 timeseries ，我们需要了解匹配规则。否则，查询会出错或给出错误的结果。匹配规则的逻辑很简单：
 
-* MetricsQL engine strips metric names from all the time series on the left and right side of the arithmetic operation without touching labels.
-* For each time series on the left side MetricsQL engine searches for the corresponding time series on the right side with the same set of labels, applies the operation for each data point and returns the resulting time series with the same set of labels. If there are no matches, then the time series is dropped from the result.
-* The matching rules may be augmented with `ignoring`, `on`, `group_left` and `group_right` modifiers. See [these docs](https://prometheus.io/docs/prometheus/latest/querying/operators/#vector-matching) for details.
+* MetricsQL引擎在不影响 Label 的情况下，从算术操作左右两侧的所有 timeseries 中去除指标名称。
+* 对于左侧的每个 timeseries，MetricsQL 引擎会在右侧搜索具有相同 Label Set 的 timeseries，对每个数据点应用操作，并返回具有相同 Label Set 的结果时间序列。如果没有匹配项，则该时间序列将从结果中删除。
+* 匹配规则可以通过 ignore、on、group\_left和group\_right 运算符进行扩展。详细信息请参阅[这些文档](https://prometheus.io/docs/prometheus/latest/querying/operators/#vector-matching)。
 
-**Comparison operations**
+## 比较运算
 
-MetricsQL supports the following comparison operators:
+MetricsQL 支持下面这些比较运算符：
 
-* equal - `==`
-* not equal - `!=`
-* greater - `>`
-* greater-or-equal - `>=`
-* less - `<`
-* less-or-equal - `<=`
+* 等于 - `==`
+* 不等于 - `!=`
+* 大于 - `>`
+* 大于等于 - `>=`
+* 小于 - `<`
+* 小于等于 - `<=`
 
-These operators may be applied to arbitrary MetricsQL expressions as with arithmetic operators. The result of the comparison operation is time series with only matching data points. For instance, the following query would return series only for processes where memory usage exceeds `100MB`:
+这些运算符可以像算术运算符一样应用于任意的MetricsQL表达式。比较运算的结果是只包含 value 匹配成功的的 timeseries。例如，下面的查询将仅返回内存使用超过`100MB`的进程列表。
 
 ```metricsql
 process_resident_memory_bytes > 100*1024*1024
 ```
 
-**Aggregation and grouping functions**
+## 聚合与分组函数
 
-MetricsQL allows aggregating and grouping of time series. Time series are grouped by the given set of labels and then the given aggregation function is applied individually per each group. For instance, the following query returns summary memory usage for each `job`:
+MetricsQL 支持对 timeseries 进行分组聚合。Time series 使用指定的一组 Label 进行分组，然后使用指定的聚合方法对每组 timeseries 的 value 做聚合计算。 比如，下面的查询返回每个 job 的 内存使用率总和：
 
 ```metricsql
 sum(process_resident_memory_bytes) by (job)
 ```
 
-See [docs for aggregate functions in MetricsQL](https://docs.victoriametrics.com/MetricsQL.html#aggregate-functions).
+更多参见 MetricsQL 的[聚合函数文档](https://docs.victoriametrics.com/MetricsQL.html#aggregate-functions)。
 
-**Calculating rates**
+## **计算速率**
 
-One of the most widely used functions for [counters](https://docs.victoriametrics.com/keyConcepts.html#counter) is [rate](https://docs.victoriametrics.com/MetricsQL.html#rate). It calculates the average per-second increase rate individually per each matching time series. For example, the following query shows the average per-second data receive speed per each monitored `node_exporter` instance, which exposes the `node_network_receive_bytes_total` metric:
+对于 [Counter](../he-xin-gai-nian/shu-ju-mo-xing.md#counter-ji-shu-qi) 类型指标使用最广泛的的一个函数是 [rate](https://docs.victoriametrics.com/MetricsQL.html#rate)。它对每一个 timeseries 独立计算每秒的平均增长率。比如，下面的查询返回的是每一个 node\_exporter 实例监控到的每秒平均入流量， `node_network_receive_bytes_total` 指标是它暴露出来的一个监控指标。
 
 ```metricsql
 rate(node_network_receive_bytes_total)
 ```
 
-By default, VictoriaMetrics calculates the `rate` over [raw samples](https://docs.victoriametrics.com/keyConcepts.html#raw-samples) on the lookbehind window specified in the `step` param passed either to [instant query](https://docs.victoriametrics.com/keyConcepts.html#instant-query) or to [range query](https://docs.victoriametrics.com/keyConcepts.html#range-query). The interval on which `rate` needs to be calculated can be specified explicitly as [duration](https://prometheus.io/docs/prometheus/latest/querying/basics/#time-durations) in square brackets:
+默认情况下，无论是 [Instance Query](../shu-ju-cha-xun.md#instant-query) 还是 [Range Query](../shu-ju-cha-xun.md#range-query-fan-wei-cha-xun)，VictoriaMetrics 都使用 `step` 参数指定的窗口大小，对回溯区间内的样本执行 `rate` 计算。`rate` 需要计算的时间间隔可以在一个中括号中指定。比如：
 
 ```metricsql
  rate(node_network_receive_bytes_total[5m])
 ```
 
-In this case VictoriaMetrics uses the specified lookbehind window - `5m` (5 minutes) - for calculating the average per-second increase rate. Bigger lookbehind windows usually lead to smoother graphs.
+在这个例子中，VictoriaMetrics 使用指定的回溯窗口 `5m`(5分钟)。来计算平均每秒增长。通常情况下回溯窗口越大，曲线图形就约平滑。
 
-`rate` strips metric name while leaving all the labels for the inner time series. If you need to keep the metric name, then add [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) modifier after the `rate(..)`. For example, the following query leaves metric names after calculating the `rate()`:
+`rate` 会保留 timeseries 中的所有 Label，**除了 Metric 名称**。如果你想要保留 Metric 名称，就需要在 `rate(...)` 后面使用 [`keep_metric_names`](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) 修改器。比如，下面的语句就是在计算 `rate()` 后保留 Metric 名称：
 
 ```metricsql
 rate(node_network_receive_bytes_total) keep_metric_names
 ```
 
-`rate()` must be applied only to [counters](https://docs.victoriametrics.com/keyConcepts.html#counter). The result of applying the `rate()` to [gauge](https://docs.victoriametrics.com/keyConcepts.html#gauge) is undefined.
+`rate()` 能且只能用于 [Counter](../he-xin-gai-nian/shu-ju-mo-xing.md#counter-ji-shu-qi) 类指标。对 [Gauge](../he-xin-gai-nian/shu-ju-mo-xing.md#gauge-yi-biao) 类型指标应用 `rate` 是没意义的。

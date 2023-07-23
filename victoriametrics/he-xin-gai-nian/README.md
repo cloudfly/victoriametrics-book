@@ -14,6 +14,6 @@
 [shu-ju-xie-ru.md](shu-ju-xie-ru.md)
 {% endcontent-ref %}
 
-{% content-ref url="shu-ju-cha-xun.md" %}
-[shu-ju-cha-xun.md](shu-ju-cha-xun.md)
+{% content-ref url="../shu-ju-cha-xun.md" %}
+[shu-ju-cha-xun.md](../shu-ju-cha-xun.md)
 {% endcontent-ref %}
