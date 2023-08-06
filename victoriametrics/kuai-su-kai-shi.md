@@ -46,15 +46,15 @@ make docker-cluster-up
 
 数据采集有 2 种主要模式：Push 和 Pull。当今监控领域都会使用，VictoriaMetrics 也全都支持。
 
-更多数据写入详情，请[参考这里](he-xin-gai-nian/shu-ju-xie-ru.md)。
+更多数据写入详情，请[参考这里](shu-ju-xie-ru.md)。
 
 ## 数据查询 <a href="#query-data" id="query-data"></a>
 
 VictoriaMetrics 提供了 HTTP 接口来处理查询请求。这些接口会被各种联合使用，比如 [Grafana](dan-ji-ban-ben.md#grafana-setup)。这些 API 通用会被 [VMUI](dan-ji-ban-ben.md#vmui) （用来查看并绘制请求数据的用户界面）使用。
 
-[MetricsQL](metricql/) - 是用来在 VictoriaMetrics 上查询数据的一种查询语言。 MetricsQL 是一个类 [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics) 的查询语言，但它拥有很多强大的处理函数和特性来处理时序数据。
+[MetricsQL](shu-ju-cha-xun/metricql/) - 是用来在 VictoriaMetrics 上查询数据的一种查询语言。 MetricsQL 是一个类 [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics) 的查询语言，但它拥有很多强大的处理函数和特性来处理时序数据。
 
-更多数据查询详情，请[参考这里](shu-ju-cha-xun.md)。
+更多数据查询详情，请[参考这里](shu-ju-cha-xun/)。
 
 ## 告警 <a href="#alerting" id="alerting"></a>
 
@@ -62,7 +62,7 @@ VictoriaMetrics 提供了 HTTP 接口来处理查询请求。这些接口会被�
 
 ## 数据迁移 <a href="#data-migration" id="data-migration"></a>
 
-将数据从其他的 TSDB 迁移到 VictoriaMetrics 就像使用[支持的数据格式](he-xin-gai-nian/shu-ju-xie-ru.md#push-mo-xing)导入数据一样简单。
+将数据从其他的 TSDB 迁移到 VictoriaMetrics 就像使用[支持的数据格式](shu-ju-xie-ru.md#push-mo-xing)导入数据一样简单。
 
 使用[vmctl](xi-tong-zu-jian/vmctl.md)迁移数据会很简单（一个 VictoriaMetrics 命令行工具）。它支持将一下几种数据库的数据迁移到 VictoriaMetrics。
 

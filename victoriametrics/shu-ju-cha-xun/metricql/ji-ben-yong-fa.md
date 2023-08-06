@@ -2,7 +2,7 @@
 
 ## **过滤器**
 
-在[数据查询](../shu-ju-cha-xun.md)部分我们已经用 MetricsQL 获取了指标 `foo_bar` 的数据。只需在查询中写入指标名称，就能轻松完成：
+在[数据查询](../)部分我们已经用 MetricsQL 获取了指标 `foo_bar` 的数据。只需在查询中写入指标名称，就能轻松完成：
 
 ```metricsql
 foo_bar
@@ -37,7 +37,7 @@ requests_total{code=~"200", path="/home"}
 
 ### **使用名字过滤**
 
-有时我们可能需要同时返回多个监控指标。就如同[数据模型](../he-xin-gai-nian/shu-ju-mo-xing.md#labels-biao-qian)中提到的，Metric 名称本质上也是一个普通的 Label 的值，其 Label 名是`__name__`。所以可以通过对 Metric 名使用正则的方式，来过滤出多个指标名的数据：
+有时我们可能需要同时返回多个监控指标。就如同[数据模型](../../he-xin-gai-nian.md#labels-biao-qian)中提到的，Metric 名称本质上也是一个普通的 Label 的值，其 Label 名是`__name__`。所以可以通过对 Metric 名使用正则的方式，来过滤出多个指标名的数据：
 
 ```metricsql
 {__name__=~"requests_(error|success)_total"}
@@ -116,13 +116,13 @@ sum(process_resident_memory_bytes) by (job)
 
 ## **计算速率**
 
-对于 [Counter](../he-xin-gai-nian/shu-ju-mo-xing.md#counter-ji-shu-qi) 类型指标使用最广泛的的一个函数是 [rate](https://docs.victoriametrics.com/MetricsQL.html#rate)。它对每一个 timeseries 独立计算每秒的平均增长率。比如，下面的查询返回的是每一个 node\_exporter 实例监控到的每秒平均入流量， `node_network_receive_bytes_total` 指标是它暴露出来的一个监控指标。
+对于 [Counter](../../he-xin-gai-nian.md#counter-ji-shu-qi) 类型指标使用最广泛的的一个函数是 [rate](https://docs.victoriametrics.com/MetricsQL.html#rate)。它对每一个 timeseries 独立计算每秒的平均增长率。比如，下面的查询返回的是每一个 node\_exporter 实例监控到的每秒平均入流量， `node_network_receive_bytes_total` 指标是它暴露出来的一个监控指标。
 
 ```metricsql
 rate(node_network_receive_bytes_total)
 ```
 
-默认情况下，无论是 [Instance Query](../shu-ju-cha-xun.md#instant-query) 还是 [Range Query](../shu-ju-cha-xun.md#range-query-fan-wei-cha-xun)，VictoriaMetrics 都使用 `step` 参数指定的窗口大小，对回溯区间内的样本执行 `rate` 计算。`rate` 需要计算的时间间隔可以在一个中括号中指定。比如：
+默认情况下，无论是 [Instance Query](../#instant-query) 还是 [Range Query](../#range-query-fan-wei-cha-xun)，VictoriaMetrics 都使用 `step` 参数指定的窗口大小，对回溯区间内的样本执行 `rate` 计算。`rate` 需要计算的时间间隔可以在一个中括号中指定。比如：
 
 ```metricsql
  rate(node_network_receive_bytes_total[5m])
@@ -136,4 +136,4 @@ rate(node_network_receive_bytes_total)
 rate(node_network_receive_bytes_total) keep_metric_names
 ```
 
-`rate()` 能且只能用于 [Counter](../he-xin-gai-nian/shu-ju-mo-xing.md#counter-ji-shu-qi) 类指标。对 [Gauge](../he-xin-gai-nian/shu-ju-mo-xing.md#gauge-yi-biao) 类型指标应用 `rate` 是没意义的。
+`rate()` 能且只能用于 [Counter](../../he-xin-gai-nian.md#counter-ji-shu-qi) 类指标。对 [Gauge](../../he-xin-gai-nian.md#gauge-yi-biao) 类型指标应用 `rate` 是没意义的。

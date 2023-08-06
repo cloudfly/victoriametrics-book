@@ -1,4 +1,4 @@
-# 数据模型
+# 核心概念
 
 ## 什么是 Metric（度量指标）
 
@@ -35,17 +35,17 @@ requests_total{path="/", code="200"}
 {__name__="requests_total", path="/", code="200"} 
 ```
 
-Labels可以自动附加到通过vmagent或Prometheus采集的 [timeseries](shu-ju-mo-xing.md#timeseries-shi-jian-xu-lie) 上。VictoriaMetrics支持对查询API强制执行 Label 过滤器以实现数据的软隔离。然而，真正的数据隔离可以通过[多租户](shu-ju-mo-xing.md#duo-zu-hu)实现。
+Labels可以自动附加到通过vmagent或Prometheus采集的 [timeseries](he-xin-gai-nian.md#timeseries-shi-jian-xu-lie) 上。VictoriaMetrics支持对查询API强制执行 Label 过滤器以实现数据的软隔离。然而，真正的数据隔离可以通过[多租户](he-xin-gai-nian.md#duo-zu-hu)实现。
 
 ### **Timeseries（时间序列）**
 
 一个指标名称和其Label的组合定义了一个 timeseries。例如，`requests_total{path="/", code="200"}` 和 `requests_total{path="/", code="403"}` 是两个不同的 timeseries，因为它们在`code`标签上有不同的值。
 
-唯一时间序列的数量对数据库资源用量产生影响。详细信息请参阅[什么是活跃时间序列](../faq.md#what-is-an-active-time-series)以及[什么是高流失率](../faq.md#gao-diu-shi-lv-shi-zhi-shen-me)。
+唯一时间序列的数量对数据库资源用量产生影响。详细信息请参阅[什么是活跃时间序列](faq.md#what-is-an-active-time-series)以及[什么是高流失率](faq.md#gao-diu-shi-lv-shi-zhi-shen-me)。
 
 ### **Cardinality（基数）**
 
-唯一时间序列的数量被称为基数。过多的唯一时间序列被称为[高基数](../faq.md#shen-me-shi-gao-ji-shu)。高基数可能导致在VictoriaMetrics中增加资源使用量。请参阅[这篇文档](../faq.md#shen-me-shi-gao-ji-shu)以获取更多详细信息。
+唯一时间序列的数量被称为基数。过多的唯一时间序列被称为[高基数](faq.md#shen-me-shi-gao-ji-shu)。高基数可能导致在VictoriaMetrics中增加资源使用量。请参阅[这篇文档](faq.md#shen-me-shi-gao-ji-shu)以获取更多详细信息。
 
 ### Raw samples（原始样本）
 
@@ -63,7 +63,7 @@ requests_total{path="/", code="200"} 123 4567890
 
 ### **Timeseries resolution（时间序列分辨率）**
 
-分辨率是 [timeseries](shu-ju-mo-xing.md#time-series-shi-jian-xu-lie) 的 [samples](shu-ju-mo-xing.md#raw-samples-yuan-shi-yang-ben) 之间的最小间隔。考虑以下示例：
+分辨率是 [timeseries](he-xin-gai-nian.md#time-series-shi-jian-xu-lie) 的 [samples](he-xin-gai-nian.md#raw-samples-yuan-shi-yang-ben) 之间的最小间隔。考虑以下示例：
 
 ```
 ----------------------------------------------------------------------
@@ -79,7 +79,7 @@ requests_total{path="/", code="200"} 123 4567890
 
 在[Pull模式](shu-ju-xie-ru.md#pull-mo-xing)中，分辨率等于抓取间隔，并由监控系统（服务器）控制。对于[Push模式](shu-ju-xie-ru.md#push-mo-xing)，分辨率是样本时间戳之间的间隔，并由客户端（指标收集器）控制。
 
-尽量保持时间序列的分辨率一致，因为某些[MetricsQL](../metricql/)函数可能期望如此，以免计算出『奇怪』的结果。
+尽量保持时间序列的分辨率一致，因为某些[MetricsQL](shu-ju-cha-xun/metricql/)函数可能期望如此，以免计算出『奇怪』的结果。
 
 ## Metric 类型
 
@@ -91,11 +91,11 @@ requests_total{path="/", code="200"} 123 4567890
 
 在编程中，Counter 是一个变量，在每次发生某个事件时递增其值。
 
-<figure><img src="../../.gitbook/assets/image (2) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (2) (1).png" alt=""><figcaption></figcaption></figure>
 
 `vm_http_requests_total` 是一个典型的 Counter 示例。上面图表的解释是，时间序列 `vm_http_requests_total{instance="localhost:8428", job="victoriametrics", path="api/v1/query_range"}` 在下午1点38分到1点39分之间迅速变化，然后在1点41分之前没有任何变化。
 
-`Counter`用于测量事件数量，例如请求、错误、日志、消息等。与计数器一起使用最常见的 [MetricsQL](../metricql/) 函数有：
+`Counter`用于测量事件数量，例如请求、错误、日志、消息等。与计数器一起使用最常见的 [MetricsQL](shu-ju-cha-xun/metricql/) 函数有：
 
 * `rate` - 计算指标每秒平均变化速度。例如，`rate(requests_total)` 显示平均每秒服务多少个请求；
 * `increase` - 计算给定时间段内指标的增长情况，时间段由方括号中指定。例如，`increase(requests_total[1h])` 显示过去一小时内服务的请求数量。
@@ -108,7 +108,7 @@ Counter 可以具有小数值。例如，`request_duration_seconds_sum` 计数�
 
 Gauge 用于测量可以上下变化的值：
 
-<figure><img src="../../.gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
 
 图表上的度量指标 `process_resident_memory_anon_bytes` 显示了应用程序在每个给定时间点的内存使用情况。它经常变化，上下波动，显示进程如何分配和释放内存。在编程中，`gauge` 是一个变量，你可以将其设置为随着变化而改变的特定值。
 
@@ -118,7 +118,7 @@ Gauge 用于测量可以上下变化的值：
 * 存储某个过程的状态。例如，如果配置重新加载成功，则可以将 gauge `config_reloaded_successful` 设置为 `1`；如果配置重新加载失败，则设置为 `0`；
 * 存储事件发生时的时间戳。例如，`config_last_reload_success_timestamp_seconds` 可以存储最后一次成功配置重新加载的时间戳。
 
-与 gauges 最常用的 [MetricsQL](../metricql/) 函数是聚合函数和滚动函数。
+与 gauges 最常用的 [MetricsQL](shu-ju-cha-xun/metricql/) 函数是聚合函数和滚动函数。
 
 ### **Histogram（直方图）**
 
@@ -182,9 +182,9 @@ for _, query := range queries {
 
 这样一组计数器指标可以在[Grafana中绘制热力图](https://grafana.com/docs/grafana/latest/visualizations/heatmap/)并计算[分位数](https://prometheus.io/docs/practices/histograms/#quantiles)：
 
-<figure><img src="../../.gitbook/assets/image (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (1) (1).png" alt=""><figcaption></figcaption></figure>
 
-Grafana对带有vmrange标签的桶不理解，因此在构建Grafana中的热力图之前，必须使用[prometheus\_buckets](../metricql/)函数将带有`vmrange`标签的桶转换为带有`le`标签的桶。
+Grafana对带有vmrange标签的桶不理解，因此在构建Grafana中的热力图之前，必须使用[prometheus\_buckets](shu-ju-cha-xun/metricql/)函数将带有`vmrange`标签的桶转换为带有`le`标签的桶。
 
 histogram 通常用于测量延迟分布、元素大小（例如批处理大小）等。VictoriaMetrics支持两种直方图实现：
 
@@ -214,7 +214,7 @@ go_gc_duration_seconds_count 83
 
 Summary 的可视化非常直观：
 
-<figure><img src="../../.gitbook/assets/image (3) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (3) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 这种方法使得 Summary 更易于使用，但与 Histogram 相比也存在显著的限制：
 
@@ -226,7 +226,7 @@ Summary 通常用于跟踪延迟、元素大小（例如批处理大小）等预
 
 ## 使用 Metric 对应用进行观测
 
-正如在[Metric类型](shu-ju-mo-xing.md#types-of-metrics)部分的开头所说，Metric类型定义了它是如何被测量的。VictoriaMetrics TSDB并不认识Metric类型。它只看到Metric的名称、Label、Value和 Timestamp。这些 Metric 是什么，它们衡量什么以及如何衡量 - 这一切都取决于发出这些指标的应用程序。
+正如在[Metric类型](he-xin-gai-nian.md#types-of-metrics)部分的开头所说，Metric类型定义了它是如何被测量的。VictoriaMetrics TSDB并不认识Metric类型。它只看到Metric的名称、Label、Value和 Timestamp。这些 Metric 是什么，它们衡量什么以及如何衡量 - 这一切都取决于发出这些指标的应用程序。
 
 为了使用与VictoriaMetrics兼容的Metric来监控您的应用程序，我们建议使用[github.com/VictoriaMetrics/metrics](https://github.com/VictoriaMetrics/metrics)包。
 
@@ -242,10 +242,10 @@ VictoriaMetrics还与[Prometheus客户端库兼容](https://prometheus.io/docs/i
 
 每个Label的值都可以包含任意字符串值。良好的实践是使用简短而有意义的标签值来描述指标属性，而不是讲述它们的故事。例如，`environment="prod"`是可以接受的正常Label，但`log_message="long log message with a lot of details..."`就不是可接受的。默认情况下，VictoriaMetrics将标签值大小限制为`16kB`。可以通过`-maxLabelValueLen`命令行参数来更改此限制（同样强烈不建议这样做）。
 
-控制唯一标签值的数量非常重要，因为每个唯一标签值都会导致一个新 [timeseries](shu-ju-mo-xing.md#time-series-shi-jian-xu-lie) 产生。尽量避免使用易变性较高的标签值（如会话ID或查询ID），以避免过多资源使用和数据库减速问题发生。
+控制唯一标签值的数量非常重要，因为每个唯一标签值都会导致一个新 [timeseries](he-xin-gai-nian.md#time-series-shi-jian-xu-lie) 产生。尽量避免使用易变性较高的标签值（如会话ID或查询ID），以避免过多资源使用和数据库减速问题发生。
 
 ## 多租户
 
-[VictoriaMetrics的集群版本](../ji-qun-ban-ben.md)支持数据隔离的多租户功能。
+[VictoriaMetrics的集群版本](ji-qun-ban-ben.md)支持数据隔离的多租户功能。
 
-对于[单机版本的VictoriaMetrics](../dan-ji-ban-ben.md)，可以通过在[写入URL路径](shu-ju-mo-xing.md#shu-ju-xie-ru)上添加 Label 并在[查询URL路径](shu-ju-mo-xing.md#shu-ju-cha-xun)上强制进行 [Label 过滤](../dan-ji-ban-ben.md#prometheus-querying-api-enhancements)来模拟多租户。
+对于[单机版本的VictoriaMetrics](dan-ji-ban-ben.md)，可以通过在[写入URL路径](he-xin-gai-nian.md#shu-ju-xie-ru)上添加 Label 并在[查询URL路径](he-xin-gai-nian.md#shu-ju-cha-xun)上强制进行 [Label 过滤](dan-ji-ban-ben.md#prometheus-querying-api-enhancements)来模拟多租户。

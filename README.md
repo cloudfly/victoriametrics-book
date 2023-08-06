@@ -12,7 +12,7 @@ VictoriaMetrics提供[二进制发布版](https://github.com/VictoriaMetrics/Vic
 
 VictoriaMetrics的集群版本可以[在这里找到](victoriametrics/ji-qun-ban-ben.md)。
 
-了解更多关于VictoriaMetrics的[核心概念](victoriametrics/he-xin-gai-nian/)，并按照[快速开始](victoriametrics/kuai-su-kai-shi.md)获得更好的体验。
+了解更多关于VictoriaMetrics的[核心概念](broken-reference)，并按照[快速开始](victoriametrics/kuai-su-kai-shi.md)获得更好的体验。
 
 它还有一个用户友好型日志数据库 - [VictoriaLogs](victorialogs/kuai-su-kai-shi.md)。
 
