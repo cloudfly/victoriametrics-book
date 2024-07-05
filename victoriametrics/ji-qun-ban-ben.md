@@ -1,71 +1,75 @@
 # 集群版本
 
-### Architecture overview <a href="#architecture-overview" id="architecture-overview"></a>
+### 架构概览 <a href="#architecture-overview" id="architecture-overview"></a>
 
-VictoriaMetrics cluster consists of the following services:
+VictoriaMetrics 集群版本由以下几个服务组成：
 
-* `vmstorage` - stores the raw data and returns the queried data on the given time range for the given label filters
-* `vminsert` - accepts the ingested data and spreads it among `vmstorage` nodes according to consistent hashing over metric name and all its labels
-* `vmselect` - performs incoming queries by fetching the needed data from all the configured `vmstorage` nodes
+* `vmstorage` - 存储原始数据，并返回在给定时间范围内针对给定 Label 筛选器查询的数据。
+* `vminsert` - 接受摄入的数据，并 根据对度量名称及其所有标签的一致散列，将数据分散到 `vmstorage` 节点中
+* `vmselect` - 通过从所有已配置的 `vmstorage` 节点获取所需数据来执行接收到的查询请求。
 
-Each service may scale independently and may run on the most suitable hardware. `vmstorage` nodes don't know about each other, don't communicate with each other and don't share any data. This is a [shared nothing architecture](https://en.wikipedia.org/wiki/Shared-nothing\_architecture). It increases cluster availability, and simplifies cluster maintenance as well as cluster scaling.
+每项服务都可独立扩展，并可在最合适的硬件上运行。 `vmstorage` 节点之间互不相识，互不通信，也不共享任何数据。 这是一种[共享无架构](https://en.wikipedia.org/wiki/Shared-nothing\_architecture) 。 它提高了集群的可用性，简化了集群维护和集群扩展。
 
-![](https://docs.victoriametrics.com/Cluster-VictoriaMetrics\_cluster-scheme.png)
+### 多租户 <a href="#multitenancy" id="multitenancy"></a>
 
-### Multitenancy <a href="#multitenancy" id="multitenancy"></a>
+VictoriaMetrics集群支持多个隔离的租户（即命名空间）。租户通过accountID或accountID:projectID进行标识，这些标识符被置于请求URL中。详情请参阅[这些文档](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#url-format)。
 
-VictoriaMetrics cluster supports multiple isolated tenants (aka namespaces). Tenants are identified by `accountID` or `accountID:projectID`, which are put inside request urls. See [these docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#url-format) for details.
+关于VictoriaMetrics中租户的一些事实：
 
-Some facts about tenants in VictoriaMetrics:
+每个accountID和projectID均由一个任意的32位整数标识，范围为\[0..2^32)。如果projectID缺失，则自动分配为0。预期其他关于租户的信息，如身份验证令牌、租户名称、限制、会计等，存储在一个独立的关系数据库中。该数据库必须由位于VictoriaMetrics集群前端的独立服务进行管理，例如[vmauth](https://docs.victoriametrics.com/vmauth.html)或[vmgateway](https://docs.victoriametrics.com/vmgateway.html)。如果您需要此类服务的协助，请联系我们。
 
-* Each `accountID` and `projectID` is identified by an arbitrary 32-bit integer in the range `[0 .. 2^32)`. If `projectID` is missing, then it is automatically assigned to `0`. It is expected that other information about tenants such as auth tokens, tenant names, limits, accounting, etc. is stored in a separate relational database. This database must be managed by a separate service sitting in front of VictoriaMetrics cluster such as [vmauth](https://docs.victoriametrics.com/vmauth.html) or [vmgateway](https://docs.victoriametrics.com/vmgateway.html). [Contact us](mailto:info@victoriametrics.com) if you need assistance with such service.
-* Tenants are automatically created when the first data point is written into the given tenant.
-* Data for all the tenants is evenly spread among available `vmstorage` nodes. This guarantees even load among `vmstorage` nodes when different tenants have different amounts of data and different query load.
-* The database performance and resource usage doesn't depend on the number of tenants. It depends mostly on the total number of active time series in all the tenants. A time series is considered active if it received at least a single sample during the last hour or it has been touched by queries during the last hour.
-* VictoriaMetrics doesn't support querying multiple tenants in a single request.
-* The list of registered tenants can be obtained via `http://<vmselect>:8481/admin/tenants` url. See [these docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#url-format).
-* VictoriaMetrics exposes various per-tenant statistics via metrics - see [these docs](https://docs.victoriametrics.com/PerTenantStatistic.html).
+当第一个数据点被写入给定的租户时，租户会被自动创建。
 
-See also [multitenancy via labels](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy-via-labels).
+所有租户的数据均匀分布在可用的`vmstorage`节点之间。这保证了当不同租户拥有不同数量的数据和不同的查询负载时，`vmstorage`节点之间的负载也是均匀的。
 
-### Multitenancy via labels <a href="#multitenancy-via-labels" id="multitenancy-via-labels"></a>
+数据库的性能和资源使用情况并不取决于租户的数量，而主要取决于所有租户中活跃时间序列的总数。如果一个时间序列在过去的一小时中至少接收了一个样本，或者在过去的一小时中被查询访问过，那么它就被认为是活跃的。
 
-`vminsert` can accept data from multiple [tenants](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy) via a special `multitenant` endpoints `http://vminsert:8480/insert/multitenant/<suffix>`, where `<suffix>` can be replaced with any supported suffix for data ingestion from [this list](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#url-format). In this case the account id and project id are obtained from optional `vm_account_id` and `vm_project_id` labels of the incoming samples. If `vm_account_id` or `vm_project_id` labels are missing or invalid, then the corresponding `accountID` or `projectID` is set to 0. These labels are automatically removed from samples before forwarding them to `vmstorage`. For example, if the following samples are written into `http://vminsert:8480/insert/multitenant/prometheus/api/v1/write`:
+VictoriaMetrics不支持在单一请求中查询多个租户。
+
+已注册租户的列表可以通过`http://<vmselect>:8481/admin/tenants` URL获取。请参阅[这些文档](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#url-format)。
+
+VictoriaMetrics通过指标公开了各种按租户划分的统计数据——请参阅[这些文档](https://docs.victoriametrics.com/PerTenantStatistic.html)。
+
+也可以看下[通过 labels 实现多租户](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy-via-labels)。
+
+### 通过 labels 实现多租户 <a href="#multitenancy-via-labels" id="multitenancy-via-labels"></a>
+
+`vminsert`可以从多个租户通过一个特殊的[多租户](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy)端点`http://vminsert:8480/insert/multitenant/<suffix>`接收数据，其中可以替换为从此列表中获取数据的任何受支持的`<suffix>`。在这种情况下，AccountID 和ProjectID是从传入样本的可选 `vm_account_id` 和 `vm_project_id` 标签中获取的。如果 vm\_account\_id 或 vm\_project\_id 标签缺失或无效，则相应的AccountID 或ProjectID 将设置为 0。在将样本转发到`vmstorage`之前，会自动从样本中删除这些Label。例如，如果将以下样本写入 `http://vminsert:8480/insert/multitenant/prometheus/api/v1/write`：
 
 ```
 http_requests_total{path="/foo",vm_account_id="42"} 12
 http_requests_total{path="/bar",vm_account_id="7",vm_project_id="9"} 34
 ```
 
-Then the `http_requests_total{path="/foo"} 12` would be stored in the tenant `accountID=42, projectID=0`, while the `http_requests_total{path="/bar"} 34` would be stored in the tenant `accountID=7, projectID=9`.
+然后`http_requests_total｛path=“/foo”｝12`将被存储在租户`accountID=42，projectID=0`中，而`http_requests_total{path=“/bar”｝34`将被存储到租户`accountID=7，projectID=9`中。
 
-The `vm_account_id` and `vm_project_id` labels are extracted after applying the [relabeling](https://docs.victoriametrics.com/relabeling.html) set via `-relabelConfig` command-line flag, so these labels can be set at this stage.
+`vm_account_id`和`vm_project_id` labels 是在通过`-rebelConfig`命令行标志应用 [relabeling](https://docs.victoriametrics.com/relabeling.html) 集后提取的，因此可以在此阶段设置这些 label。
 
-**Security considerations:** it is recommended restricting access to `multitenant` endpoints only to trusted sources, since untrusted source may break per-tenant data by writing unwanted samples to arbitrary tenants.
+**安全提示**：建议将对多租户端点的访问限制为仅限可信源，因为不可信源可能会通过向任意租户写入不需要的样本来破坏每个租户的数据。
 
-### Binaries <a href="#binaries" id="binaries"></a>
+### 二进制 <a href="#binaries" id="binaries"></a>
 
-Compiled binaries for the cluster version are available in the `assets` section of the [releases page](https://github.com/VictoriaMetrics/VictoriaMetrics/releases). Also see archives containing the word `cluster`.
+集群版本的编译二进制文件可在[发布页面](https://github.com/VictoriaMetrics/VictoriaMetrics/releases)的 assets 部分中找到。另请参阅包含单词“集群”的档案。
 
-Docker images for the cluster version are available here:
+&#x20;集群版本的 Docker 镜像可在此处找到：
 
 * `vminsert` - [https://hub.docker.com/r/victoriametrics/vminsert/tags](https://hub.docker.com/r/victoriametrics/vminsert/tags)
 * `vmselect` - [https://hub.docker.com/r/victoriametrics/vmselect/tags](https://hub.docker.com/r/victoriametrics/vmselect/tags)
 * `vmstorage` - [https://hub.docker.com/r/victoriametrics/vmstorage/tags](https://hub.docker.com/r/victoriametrics/vmstorage/tags)
 
-### Building from sources <a href="#building-from-sources" id="building-from-sources"></a>
+### 源码构建 <a href="#building-from-sources" id="building-from-sources"></a>
 
-The source code for the cluster version is available in the [cluster branch](https://github.com/VictoriaMetrics/VictoriaMetrics/tree/cluster).
+集群版本的源代码可在[`cluster分支`](https://github.com/VictoriaMetrics/VictoriaMetrics/tree/cluster)中获取。
 
-#### Production builds <a href="#production-builds" id="production-builds"></a>
+#### 生产环境构建 <a href="#production-builds" id="production-builds"></a>
 
-There is no need to install Go on a host system since binaries are built inside [the official docker container for Go](https://hub.docker.com/\_/golang). This allows reproducible builds. So [install docker](https://docs.docker.com/install/) and run the following command:
+无需在主机系统上安装 Go，因为二进制文件是在 [Go 的官方 docker 容器](https://hub.docker.com/\_/golang)内构建的。这允许可重现的构建。因此，[安装 docker](https://docs.docker.com/install/) 并运行以下命令：
 
 ```
 make vminsert-prod vmselect-prod vmstorage-prod
 ```
 
-Production binaries are built into statically linked binaries. They are put into the `bin` folder with `-prod` suffixes:
+生产二进制文件内置于静态链接二进制文件中。它们被放入带有 `-prod` 后缀的 `bin` 文件夹中：
 
 ```
 $ make vminsert-prod vmselect-prod vmstorage-prod
@@ -75,36 +79,36 @@ vmselect-prod
 vmstorage-prod
 ```
 
-#### Development Builds <a href="#development-builds" id="development-builds"></a>
+#### 开发环境构建 <a href="#development-builds" id="development-builds"></a>
 
-1. [Install go](https://golang.org/doc/install). The minimum supported version is Go 1.18.
-2. Run `make` from [the repository root](https://github.com/VictoriaMetrics/VictoriaMetrics). It should build `vmstorage`, `vmselect` and `vminsert` binaries and put them into the `bin` folder.
+1. [安装Go](https://golang.org/doc/install)，最低支持版本是 Go1.18。
+2. 从[仓库根目录](https://github.com/VictoriaMetrics/VictoriaMetrics)运行 `make`。它应该构建 `vmstorage`、`vmselect` 和 `vminsert` 二进制文件并将它们放入 bin 文件夹中。
 
-#### Building docker images <a href="#building-docker-images" id="building-docker-images"></a>
+#### 构建 docker 镜像 <a href="#building-docker-images" id="building-docker-images"></a>
 
-Run `make package`. It will build the following docker images locally:
+执行 `make package`命令，会在本地构建下面几个 docker 镜像：
 
 * `victoriametrics/vminsert:<PKG_TAG>`
 * `victoriametrics/vmselect:<PKG_TAG>`
 * `victoriametrics/vmstorage:<PKG_TAG>`
 
-`<PKG_TAG>` is auto-generated image tag, which depends on source code in [the repository](https://github.com/VictoriaMetrics/VictoriaMetrics). The `<PKG_TAG>` may be manually set via `PKG_TAG=foobar make package`.
+`<PKG_TAG>` 是根据[仓库中的源码](https://github.com/VictoriaMetrics/VictoriaMetrics)自动生产的 image tag。`<PKG_TAG>` 可以使用环境变量来指定，比如：`PKG_TAG=foobar make package`.
 
-By default, images are built on top of [alpine](https://hub.docker.com/\_/scratch) image in order to improve debuggability. It is possible to build an image on top of any other base image by setting it via `<ROOT_IMAGE>` environment variable. For example, the following command builds images on top of [scratch](https://hub.docker.com/\_/scratch) image:
+默认情况下，为了提高可调试性，image 是在 [alpine image](https://hub.docker.com/\_/scratch) 之上构建的。可以通过 \<ROOT\_IMAGE> 环境变量设置，在任何其他基础镜像之上构建镜像。例如，以下命令在[临时镜像](https://hub.docker.com/\_/scratch)之上构建镜像：
 
 ```
 ROOT_IMAGE=scratch make package
 ```
 
-### Operation <a href="#operation" id="operation"></a>
+### 运维 <a href="#operation" id="operation"></a>
 
-### Cluster setup <a href="#cluster-setup" id="cluster-setup"></a>
+### 部署集群 <a href="#cluster-setup" id="cluster-setup"></a>
 
-A minimal cluster must contain the following nodes:
+一个集群至少包含下面几项：
 
-* a single `vmstorage` node with `-retentionPeriod` and `-storageDataPath` flags
-* a single `vminsert` node with `-storageNode=<vmstorage_host>`
-* a single `vmselect` node with `-storageNode=<vmstorage_host>`
+* 一个 `vmstorage` 节点，需要指定 `-retentionPeriod` 和 `-storageDataPath` 参数
+* 一个 `vminsert` 节点，需要指定 `-storageNode=<vmstorage_host>`
+* 一个 `vmselect` 节点，需要指定 `-storageNode=<vmstorage_host>`
 
 [Enterprise version of VictoriaMetrics](https://docs.victoriametrics.com/enterprise.html) supports automatic discovering and updating of `vmstorage` nodes. See [these docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#automatic-vmstorage-discovery) for details.
 
