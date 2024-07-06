@@ -175,7 +175,7 @@ func ResetStorageNodes(addrs []string, hashSeed uint64) {
 
 自己实现发现实例列表的库，在库里面调用该`ResetStorageNodes`方法即可。
 
-### Security <a href="#security" id="security"></a>
+### 安全 <a href="#security" id="security"></a>
 
 一般的安全建议：
 
@@ -187,33 +187,17 @@ func ResetStorageNodes(addrs []string, hashSeed uint64) {
 
 也可以参考 [security recommendation for single-node VictoriaMetrics](https://docs.victoriametrics.com/#security) 和 [the general security page at VictoriaMetrics website](https://victoriametrics.com/security/).
 
-### mTLS 保护 <a href="#mtls-protection" id="mtls-protection"></a>
-
-By default `vminsert` and `vmselect` nodes use unencrypted connections to `vmstorage` nodes, since it is assumed that all the cluster components [run in a protected environment](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#security). [Enterprise version of VictoriaMetrics](https://docs.victoriametrics.com/enterprise.html) provides optional support for [mTLS connections](https://en.wikipedia.org/wiki/Mutual\_authentication#mTLS) between cluster components. Pass `-cluster.tls=true` command-line flag to `vminsert`, `vmselect` and `vmstorage` nodes in order to enable mTLS protection. Additionally, `vminsert`, `vmselect` and `vmstorage` must be configured with mTLS certificates via `-cluster.tlsCertFile`, `-cluster.tlsKeyFile` command-line options. These certificates are mutually verified when `vminsert` and `vmselect` dial `vmstorage`.
-
-The following optional command-line flags related to mTLS are supported:
-
-* `-cluster.tlsInsecureSkipVerify` can be set at `vminsert`, `vmselect` and `vmstorage` in order to disable peer certificate verification. Note that this breaks security.
-* `-cluster.tlsCAFile` can be set at `vminsert`, `vmselect` and `vmstorage` for verifying peer certificates issued with custom [certificate authority](https://en.wikipedia.org/wiki/Certificate\_authority). By default, system-wide certificate authority is used for peer certificate verification.
-* `-cluster.tlsCipherSuites` can be set to the list of supported TLS cipher suites at `vmstorage`. See [the list of supported TLS cipher suites](https://pkg.go.dev/crypto/tls#pkg-constants).
-
-When `vmselect` runs with `-clusternativeListenAddr` command-line option, then it can be configured with `-clusternative.tls*` options similar to `-cluster.tls*` for accepting `mTLS` connections from top-level `vmselect` nodes in [multi-level cluster setup](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multi-level-cluster-setup).
-
-See [these docs](https://gist.github.com/f41gh7/76ed8e5fb1ebb9737fe746bae9175ee6) on how to set up mTLS in VictoriaMetrics cluster.
-
-[Enterprise version of VictoriaMetrics](https://docs.victoriametrics.com/enterprise.html) can be downloaded and evaluated for free from [the releases page](https://github.com/VictoriaMetrics/VictoriaMetrics/releases).
-
 ### 监控 <a href="#monitoring" id="monitoring"></a>
 
-All the cluster components expose various metrics in Prometheus-compatible format at `/metrics` page on the TCP port set in `-httpListenAddr` command-line flag. By default, the following TCP ports are used:
+所有集群组件均在 `-httpListenAddr` 命令行参数中设置的 TCP 端口上的 `/metrics` 页面上以 Prometheus 兼容格式公开各种指标。默认情况下，使用以下 TCP 端口：
 
 * `vminsert` - 8480
 * `vmselect` - 8481
 * `vmstorage` - 8482
 
-It is recommended setting up [vmagent](https://docs.victoriametrics.com/vmagent.html) or Prometheus to scrape `/metrics` pages from all the cluster components, so they can be monitored and analyzed with [the official Grafana dashboard for VictoriaMetrics cluster](https://grafana.com/grafana/dashboards/11176-victoriametrics-cluster/) or [an alternative dashboard for VictoriaMetrics cluster](https://grafana.com/grafana/dashboards/11831). Graphs on these dashboards contain useful hints - hover the `i` icon at the top left corner of each graph in order to read it.
+建议使用 [vmagent](https://docs.victoriametrics.com/vmagent.html) 或 Prometheus 以从所有集群组件中抓取 `/metrics` 页面，这样就可以使用 VictoriaMetrics 集群的[官方 Grafana 大盘](https://grafana.com/grafana/dashboards/11176-victoriametrics-cluster/)或 [VictoriaMetrics 集群大盘](https://grafana.com/grafana/dashboards/11831)来监控和分析它们。这些仪表板上的图表包含有用的提示 - 将鼠标悬停在每个图表左上角的 `i` 图标上即可阅读。
 
-It is recommended setting up alerts in [vmalert](https://docs.victoriametrics.com/vmalert.html) or in Prometheus from [this config](https://github.com/VictoriaMetrics/VictoriaMetrics/blob/cluster/deployment/docker/alerts.yml). See more details in the article [VictoriaMetrics Monitoring](https://victoriametrics.com/blog/victoriametrics-monitoring/).
+建议通过[此配置](https://github.com/VictoriaMetrics/VictoriaMetrics/blob/cluster/deployment/docker/alerts.yml)在 [vmalert](https://docs.victoriametrics.com/vmalert.html) 或 Prometheus 中设置告警。更多详细信息请参阅文章 [VictoriaMetrics 监控](https://victoriametrics.com/blog/victoriametrics-monitoring/)。 基数限制。
 
 ### 基数限制 <a href="#cardinality-limiter" id="cardinality-limiter"></a>
 
@@ -232,9 +216,9 @@ It is recommended setting up alerts in [vmalert](https://docs.victoriametrics.co
 
 ### 只读模式 <a href="#readonly-mode" id="readonly-mode"></a>
 
-`vmstorage` nodes automatically switch to readonly mode when the directory pointed by `-storageDataPath` contains less than `-storage.minFreeDiskSpaceBytes` of free space. `vminsert` nodes stop sending data to such nodes and start re-routing the data to the remaining `vmstorage` nodes.
+当 `-storageDataPath` 指向的目录包含的可用空间少于 `-storage.minFreeDiskSpaceBytes` 时，vmstorage 节点会自动切换到只读模式。`vminsert` 节点停止向此类节点发送数据，并开始将数据重新路由到剩余的 vmstorage 节点。
 
-`vmstorage` sets `vm_storage_is_read_only` metric at `http://vmstorage:8482/metrics` to `1` when it enters read-only mode. The metric is set to `0` when the `vmstorage` isn't in read-only mode.
+当 `vmstorage` 进入只读模式时，它会将 http://vmstorage:8482/metrics 上的 `vm_storage_is_read_only` 指标设置为 `1`。当 `vmstorage` 未处于只读模式时，该指标值为 `0`。
 
 ### API接口 <a href="#url-format" id="url-format"></a>
 
@@ -301,90 +285,90 @@ It is recommended setting up alerts in [vmalert](https://docs.victoriametrics.co
 
 ### 集群扩缩容 <a href="#cluster-resizing-and-scalability" id="cluster-resizing-and-scalability"></a>
 
-Cluster performance and capacity can be scaled up in two ways:
+集群的性能和容量有两种提升方式：
 
-* By adding more resources (CPU, RAM, disk IO, disk space, network bandwidth) to existing nodes in the cluster (aka vertical scalability).
-* By adding more nodes to the cluster (aka horizontal scalability).
+* 为先有的实例节点增加计算资源（CPU，内存，磁盘IO，磁盘空间，网络带宽），即垂直扩容。
+* 为集群增加更多的实例节点，即水平扩容。
 
-General recommendations for cluster scalability:
+一些扩容建议：
 
-* Adding more CPU and RAM to existing `vmselect` nodes improves the performance for heavy queries, which process big number of time series with big number of raw samples. See [this article on how to detect and optimize heavy queries](https://valyala.medium.com/how-to-optimize-promql-and-metricsql-queries-85a1b75bf986).
-* Adding more `vmstorage` nodes increases the number of [active time series](https://docs.victoriametrics.com/FAQ.html#what-is-an-active-time-series) the cluster can handle. This also increases query performance over time series with [high churn rate](https://docs.victoriametrics.com/FAQ.html#what-is-high-churn-rate). The cluster stability is also improved with the number of `vmstorage` nodes, since active `vmstorage` nodes need to handle lower additional workload when some of `vmstorage` nodes become unavailable.
-* Adding more CPU and RAM to existing `vmstorage` nodes increases the number of [active time series](https://docs.victoriametrics.com/FAQ.html#what-is-an-active-time-series) the cluster can handle. It is preferred to add more `vmstorage` nodes over adding more CPU and RAM to existing `vmstorage` nodes, since higher number of `vmstorage` nodes increases cluster stability and improves query performance over time series with [high churn rate](https://docs.victoriametrics.com/FAQ.html#what-is-high-churn-rate).
-* Adding more `vminsert` nodes increases the maximum possible data ingestion speed, since the ingested data may be split among bigger number of `vminsert` nodes.
-* Adding more `vmselect` nodes increases the maximum possible queries rate, since the incoming concurrent requests may be split among bigger number of `vmselect` nodes.
+* 向现有 `vmselect` 节点添加更多 CPU 和 RAM 可提高重度查询的性能，这些查询会处理大量时间序列和大量原始样本。请[参阅本文](https://valyala.medium.com/how-to-optimize-promql-and-metricsql-queries-85a1b75bf986)，了解如何检测和优化重度查询。
+* 添加更多 `vmstorage` 节点以增加集群可以处理的[活动时间序列](https://docs.victoriametrics.com/FAQ.html#what-is-an-active-time-series)的数量。这还会提高[高流失率](https://docs.victoriametrics.com/FAQ.html#what-is-high-churn-rate)时间序列的查询性能。集群稳定性也会随着 `vmstorage` 节点数量的增加而提高，因为当某些 vmstorage 节点不可用时，活动 `vmstorage` 节点需要处理的额外工作负载较少。
+* 向现有 `vmstorage` 节点添加更多 CPU 和 RAM 会增加集群可以处理的[活动时间序列](https://docs.victoriametrics.com/FAQ.html#what-is-an-active-time-series)的数量。与向现有 `vmstorage` 节点添加更多 CPU 和 RAM 相比，添加更多 `vmstorage` 节点是更好的选择，因为 `vmstorage` 节点数量越多，集群稳定性就越高，并且会提高[高流失率](https://docs.victoriametrics.com/FAQ.html#what-is-high-churn-rate)时间序列的查询性能。
+* 添加更多 `vminsert` 节点会增加最大可能的数据提取速度，因为提取的数据可能会在更多数量的 `vminsert` 节点之间分配。
+* 添加更多 `vmselect` 节点会增加最大可能的查询率，因为传入的并发请求可能会在更多 `vmselect` 节点之间分配。
 
-Steps to add `vmstorage` node:
+新增 `vmstorage` 节点的步骤：
 
-1. Start new `vmstorage` node with the same `-retentionPeriod` as existing nodes in the cluster.
-2. Gradually restart all the `vmselect` nodes with new `-storageNode` arg containing `<new_vmstorage_host>`.
-3. Gradually restart all the `vminsert` nodes with new `-storageNode` arg containing `<new_vmstorage_host>`.
+1. 启动具有与集群中现有节点相同的 `-retentionPeriod` 的新 `vmstorage` 节点。
+2. 平滑启动 vmselect 节点，并在`-storageNode` 参数中把 `<new_vmstorage_host>`加上。
+3. 平滑启动 vminsert 节点，并在`-storageNode` 参数中把 `<new_vmstorage_host>`加上。
 
 ### 升级集群节点 <a href="#updating--reconfiguring-cluster-nodes" id="updating--reconfiguring-cluster-nodes"></a>
 
-All the node types - `vminsert`, `vmselect` and `vmstorage` - may be updated via graceful shutdown. Send `SIGINT` signal to the corresponding process, wait until it finishes and then start new version with new configs.
+所有节点类型 - `vminsert`、`vmselect` 和 `vmstorage` - 都可以通过启停进行更新。向相应进程发送 `SIGINT` 信号，等待其退出，然后使用新配置启动新版本。&#x20;
 
-There are the following cluster update / upgrade approaches exist:
+存在以下集群更新/升级方法：
 
 #### 无停机策略 <a href="#no-downtime-strategy" id="no-downtime-strategy"></a>
 
-Gracefully restart every node in the cluster one-by-one with the updated config / upgraded binary.
+使用更新的配置/升级的二进制文件逐个重新启动集群中的每个节点。&#x20;
 
-It is recommended restarting the nodes in the following order:
+建议按以下顺序重新启动节点：
 
-1. Restart `vmstorage` nodes.
-2. Restart `vminsert` nodes.
-3. Restart `vmselect` nodes.
+1. 重启 `vmstorage` nodes.
+2. 重启 `vminsert` nodes.
+3. 重启 `vmselect` nodes.
 
-This strategy allows upgrading the cluster without downtime if the following conditions are met:
+如果满足以下条件，此策略允许在不停机的情况下升级集群：
 
-* The cluster has at least a pair of nodes of each type - `vminsert`, `vmselect` and `vmstorage`, so it can continue to accept new data and serve incoming requests when a single node is temporary unavailable during its restart. See [cluster availability docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#cluster-availability) for details.
-* The cluster has enough compute resources (CPU, RAM, network bandwidth, disk IO) for processing the current workload when a single node of any type (`vminsert`, `vmselect` or `vmstorage`) is temporarily unavailable during its restart.
-*   The updated config / upgraded binary is compatible with the remaining components in the cluster. See the [CHANGELOG](https://docs.victoriametrics.com/CHANGELOG.html) for compatibility notes between different releases.
+* 集群至少有两个及以上实例（每种类型都有 `vminsert`、`vmselect` 和 `vmstorage`），因此当单个节点在重启期间暂时不可用时，其它实例可以继续接受新数据并处理传入请求。有关详细信息，请参阅[集群可用性](ji-qun-ban-ben.md#cluster-availability)文档。
+* 当任何类型的单个节点（`vminsert`、`vmselect` 或 `vmstorage`）在重启期间暂时不可用时，集群具有足够的计算资源（CPU、RAM、网络带宽、磁盘 IO）来处理当前工作负载。
+* 更新后的的二进制文件与集群中的其余组件兼容。请参阅 [CHANGELOG](https://docs.victoriametrics.com/CHANGELOG.html) 了解不同版本之间的兼容性说明。&#x20;
 
-    If at least a single condition isn't met, then the rolling restart may result in cluster unavailability during the config update / version upgrade. In this case the following strategy is recommended.
+只要有一个条件不满足，则滚动重启可能会导致在升级期间集群不可用。在这种情况下，建议采用以下策略。
 
-#### 最小停机策略 <a href="#minimum-downtime-strategy" id="minimum-downtime-strategy"></a>
+#### 最短停机策略 <a href="#minimum-downtime-strategy" id="minimum-downtime-strategy"></a>
 
-1. Gracefully stop all the `vminsert` and `vmselect` nodes in parallel.
-2. Gracefully restart all the `vmstorage` nodes in parallel.
-3. Start all the `vminsert` and `vmselect` nodes in parallel.
+1. 并发停止所有的 `vminsert` 和 `vmselect` 实例。
+2. 并发重启所有的`vmstorage` 实例。
+3. 并发重启所有的`vminsert` 和 `vmselect` 实例。
 
-The cluster is unavailable for data ingestion and querying when performing the steps above. The downtime is minimized by restarting cluster nodes in parallel at every step above. The `minimum downtime` strategy has the following benefits comparing to `no downtime` strategy:
+执行上述步骤时，集群无法进行数据提取和查询。通过在上述每个步骤中并行重启集群节点，可以最大限度地减少停机时间。与无停机策略相比，最短停机时间策略具有以下优势：
 
-* It allows performing config update / version upgrade with minimum disruption when the previous config / version is incompatible with the new config / version.
-* It allows performing config update / version upgrade with minimum disruption when the cluster has no enough compute resources (CPU, RAM, disk IO, network bandwidth) for rolling upgrade.
-* It allows minimizing the duration of config update / version upgrade for clusters with big number of nodes of for clusters with big `vmstorage` nodes, which may take long time for graceful restart.
+* 当以前的版本与新版本不兼容时，它允许以最小的中断完成升级。
+* 当集群没有足够的计算资源（CPU、RAM、磁盘 IO、网络带宽）进行滚动升级时，它允许以最小的中断完成版本升级。&#x20;
+* 对于具有大量节点的集群或具有大量 vmstorage 节点的集群，它允许最短升级的持续时间，因为它需要很长时间才能平滑重启。
 
 ### 集群可用性 <a href="#cluster-availability" id="cluster-availability"></a>
 
-VictoriaMetrics cluster architecture prioritizes availability over data consistency. This means that the cluster remains available for data ingestion and data querying if some of its components are temporarily unavailable.
+**VictoriaMetrics 集群架构优先考虑可用性而不是数据一致性**。这意味着，如果集群的某些组件暂时不可用，集群仍可用于数据提取和数据查询。&#x20;
 
-VictoriaMetrics cluster remains available if the following conditions are met:
+如果满足以下条件，VictoriaMetrics 集群将保持可用：&#x20;
 
-* HTTP load balancer must stop routing requests to unavailable `vminsert` and `vmselect` nodes ([vmauth](https://docs.victoriametrics.com/vmauth.html) stops routing requests to unavailable nodes).
-* At least a single `vminsert` node must remain available in the cluster for processing data ingestion workload. The remaining active `vminsert` nodes must have enough compute capacity (CPU, RAM, network bandwidth) for handling the current data ingestion workload. If the remaining active `vminsert` nodes have no enough resources for processing the data ingestion workload, then arbitrary delays may occur during data ingestion. See [capacity planning](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#capacity-planning) and [cluster resizing](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#cluster-resizing-and-scalability) docs for more details.
-* At least a single `vmselect` node must remain available in the cluster for processing query workload. The remaining active `vmselect` nodes must have enough compute capacity (CPU, RAM, network bandwidth, disk IO) for handling the current query workload. If the remaining active `vmselect` nodes have no enough resources for processing query workload, then arbitrary failures and delays may occur during query processing. See [capacity planning](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#capacity-planning) and [cluster resizing](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#cluster-resizing-and-scalability) docs for more details.
-* At least a single `vmstorage` node must remain available in the cluster for accepting newly ingested data and for processing incoming queries. The remaining active `vmstorage` nodes must have enough compute capacity (CPU, RAM, network bandwidth, disk IO, free disk space) for handling the current workload. If the remaining active `vmstorage` nodes have no enough resources for processing query workload, then arbitrary failures and delay may occur during data ingestion and query processing. See [capacity planning](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#capacity-planning) and [cluster resizing](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#cluster-resizing-and-scalability) docs for more details.
+* HTTP 负载平衡器必须停止将请求路由到不可用的 vminsert 和 vmselect 节点（[vmauth](https://docs.victoriametrics.com/vmauth.html) 停止将请求路由到不可用的节点）。&#x20;
+* 集群中必须至少有一个 vminsert 节点可用于处理数据提取工作负载。其余可用的的 vminsert 节点必须具有足够的计算能力（CPU、RAM、网络带宽）来处理当前的数据写入工作负载。如果其余可用的 vminsert 节点没有足够的资源来处理数据提取工作负载，则数据提取期间可能会出现任意延迟。有关更多详细信息，请参阅[容量规划](ji-qun-ban-ben.md#capacity-planning)和[集群扩缩容](ji-qun-ban-ben.md#cluster-resizing-and-scalability)文档。&#x20;
+* 集群中必须至少有一个 vmselect 节点可用于处理查询工作负载。其余活动的 vmselect 节点必须具有足够的计算能力（CPU、RAM、网络带宽、磁盘 IO）来处理当前的查询工作负载。如果剩余的活动 vmselect 节点没有足够的资源来处理查询工作负载，则在查询处理期间可能会发生任意故障和延迟。有关更多详细信息，请参阅[容量规划](ji-qun-ban-ben.md#capacity-planning)和[集群扩缩容](ji-qun-ban-ben.md#cluster-resizing-and-scalability)文档。&#x20;
+* 集群中必须至少有一个 vmstorage 节点可用，以接受新提取的数据和处理传入的查询。剩余的活动 vmstorage 节点必须具有足够的计算能力（CPU、RAM、网络带宽、磁盘 IO、可用磁盘空间）来处理当前工作负载。如果剩余的活动 vmstorage 节点没有足够的资源来处理查询工作负载，则在数据提取和查询处理期间可能会发生任意故障和延迟。有关更多详细信息，请参阅[容量规划](ji-qun-ban-ben.md#capacity-planning)和[集群扩缩容](ji-qun-ban-ben.md#cluster-resizing-and-scalability)文档。&#x20;
 
-The cluster works in the following way when some of `vmstorage` nodes are unavailable:
+当某些 vmstorage 节点不可用时，集群的工作方式如下：&#x20;
 
-* `vminsert` re-routes newly ingested data from unavailable `vmstorage` nodes to remaining healthy `vmstorage` nodes. This guarantees that the newly ingested data is properly saved if the healthy `vmstorage` nodes have enough CPU, RAM, disk IO and network bandwidth for processing the increased data ingestion workload. `vminsert` spreads evenly the additional data among the healthy `vmstorage` nodes in order to spread evenly the increased load on these nodes.
-*   `vmselect` continues serving queries if at least a single `vmstorage` nodes is available. It marks responses as partial for queries served from the remaining healthy `vmstorage` nodes, since such responses may miss historical data stored on the temporarily unavailable `vmstorage` nodes. Every partial JSON response contains `"isPartial": true` option. If you prefer consistency over availability, then run `vmselect` nodes with `-search.denyPartialResponse` command-line flag. In this case `vmselect` returns an error if at least a single `vmstorage` node is unavailable. Another option is to pass `deny_partial_response=1` query arg to requests to `vmselect` nodes.
+* vminsert 将新写入的数据从不可用的 vmstorage 节点重新路由到剩余的健康 vmstorage 节点。如果健康的 vmstorage 节点具有足够的 CPU、RAM、磁盘 IO 和网络带宽来处理新增加的数据量，就可确保新写入的数据得以正确保存。vminsert 会在健康的 vmstorage 节点之间均匀分布额外的数据，以便均匀分布这些节点上增加的负载。
+*   只要有一个 vmstorage 节点可用，vmselect 将继续提供查询。它会将其余健康 vmstorage 节点提供的查询的响应标记为部分响应，因为此类响应可能会丢失存储在暂时不可用的 vmstorage 节点上的历史数据。每个部分 JSON 响应都包含`“isPartial”：true` 选项。如果您更喜欢一致性而不是可用性，请使用 `-search.denyPartialResponse` 命令行参数运行 vmselect 节点。在这种情况下，只要有一个 vmstorage 节点不可用，vmselect 将返回错误。另一个选项是在vmselect的查询请求中加上`deny_partial_response=1` 参数。
 
-    `vmselect` also accepts `-replicationFactor=N` command-line flag. This flag instructs `vmselect` to return full response if less than `-replicationFactor` vmstorage nodes are unavailable during querying, since it assumes that the remaining `vmstorage` nodes contain the full data. See [these docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#replication-and-data-safety) for details.
+    vmselect 还接受 `-replicationFactor=N` 命令行参数。此参数表示 vmselect 在查询期间如果少于 `-replicationFactor` 个 vmstorage 节点不可用则返回完整响应，因为它假定剩余的 vmstorage 节点包含完整数据。有关详细信息，请参阅[这些文档](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#replication-and-data-safety)。&#x20;
 
-`vmselect` doesn't serve partial responses for API handlers returning raw datapoints - [`/api/v1/export*` endpoints](https://docs.victoriametrics.com/#how-to-export-time-series), since users usually expect this data is always complete.
+vmselect 不会为返回原始数据点的 API 处理程序提供部分响应 - `/api/v1/export*` [接口](https://docs.victoriametrics.com/#how-to-export-time-series)，因为用户通常希望这些数据始终是完整的。&#x20;
 
-Data replication can be used for increasing storage durability. See [these docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#replication-and-data-safety) for details.
+数据副本可用于提高存储耐用性。有关详细信息，请参阅[这些文档](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#replication-and-data-safety)。
 
 ### 容量规划 <a href="#capacity-planning" id="capacity-planning"></a>
 
-VictoriaMetrics uses lower amounts of CPU, RAM and storage space on production workloads compared to competing solutions (Prometheus, Thanos, Cortex, TimescaleDB, InfluxDB, QuestDB, M3DB) according to [our case studies](https://docs.victoriametrics.com/CaseStudies.html).
+根据我们的[案例研究](https://docs.victoriametrics.com/CaseStudies.html)，与竞争解决方案（Prometheus、Thanos、Cortex、TimescaleDB、InfluxDB、QuestDB、M3DB）相比，VictoriaMetrics 在生产工作负载上使用的 CPU、RAM 和存储空间更少。&#x20;
 
-Each node type - `vminsert`, `vmselect` and `vmstorage` - can run on the most suitable hardware. Cluster capacity scales linearly with the available resources. The needed amounts of CPU and RAM per each node type highly depends on the workload - the number of [active time series](https://docs.victoriametrics.com/FAQ.html#what-is-an-active-time-series), [series churn rate](https://docs.victoriametrics.com/FAQ.html#what-is-high-churn-rate), query types, query qps, etc. It is recommended setting up a test VictoriaMetrics cluster for your production workload and iteratively scaling per-node resources and the number of nodes per node type until the cluster becomes stable. It is recommended setting up [monitoring for the cluster](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#monitoring). It helps to determine bottlenecks in cluster setup. It is also recommended following [the troubleshooting docs](https://docs.victoriametrics.com/#troubleshooting).
+每种节点类型（`vminsert`、`vmselect` 和 `vmstorage`）都可以在最合适的硬件上运行。集群容量随可用资源线性扩展。每种节点类型所需的 CPU 和 RAM 数量高度依赖于工作负载 - [活动时间序列](https://docs.victoriametrics.com/FAQ.html#what-is-an-active-time-series)的数量、[序列流失率](https://docs.victoriametrics.com/FAQ.html#what-is-high-churn-rate)、查询类型、查询 qps 等。建议为您的生产工作负载设置一个测试 VictoriaMetrics 集群，并迭代扩展每个节点的资源和每个节点类型的节点数量，直到集群稳定下来。建议为[集群设置监控](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#monitoring)。它有助于确定集群设置中的瓶颈。还建议遵循[故障排除](https://docs.victoriametrics.com/#troubleshooting)文档。&#x20;
 
-The needed storage space for the given retention (the retention is set via `-retentionPeriod` command-line flag at `vmstorage`) can be extrapolated from disk space usage in a test run. For example, if the storage space usage is 10GB after a day-long test run on a production workload, then it will need at least `10GB*100=1TB` of disk space for `-retentionPeriod=100d` (100-days retention period). Storage space usage can be monitored with [the official Grafana dashboard for VictoriaMetrics cluster](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#monitoring).
+给定保留期所需的存储空间（保留期通过 vmstorage 上的 `-retentionPeriod` 命令行标志设置）可以根据测试运行中的磁盘空间使用情况推断出来。例如，如果在生产工作负载上进行一天的测试运行后存储空间使用量为 10GB，那么在 `-retentionPeriod=100d`（100 天保留期）的情况下，至少需要 `10GB*100=1TB` 的磁盘空间。可以使用 VictoriaMetrics 集群的[官方 Grafana 大盘](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#monitoring)监控存储空间使用情况。
 
 It is recommended leaving the following amounts of spare resources:
 
