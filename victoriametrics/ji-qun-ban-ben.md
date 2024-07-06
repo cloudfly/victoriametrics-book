@@ -110,74 +110,84 @@ ROOT_IMAGE=scratch make package
 * 一个 `vminsert` 节点，需要指定 `-storageNode=<vmstorage_host>`
 * 一个 `vmselect` 节点，需要指定 `-storageNode=<vmstorage_host>`
 
-[Enterprise version of VictoriaMetrics](https://docs.victoriametrics.com/enterprise.html) supports automatic discovering and updating of `vmstorage` nodes. See [these docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#automatic-vmstorage-discovery) for details.
+建议每个服务至少运行两个实例，以实现高可用性。在这种情况下，当单个节点暂时不可用时，群集仍可继续工作，其余节点可处理增加的工作量。在底层硬件损坏、软件升级、迁移或其他维护任务期间，节点可能会暂时不可用。
 
-It is recommended to run at least two nodes for each service for high availability purposes. In this case the cluster continues working when a single node is temporarily unavailable and the remaining nodes can handle the increased workload. The node may be temporarily unavailable when the underlying hardware breaks, during software upgrades, migration or other maintenance tasks.
+最好运行许多小型 vmstorage 节点而不是少数大型 vmstorage 节点，因为当某些 vmstorage 节点暂时不可用时，这可以减少剩余 vmstorage 节点上的工作负载增加。
 
-It is preferred to run many small `vmstorage` nodes over a few big `vmstorage` nodes, since this reduces the workload increase on the remaining `vmstorage` nodes when some of `vmstorage` nodes become temporarily unavailable.
+必须在 vminsert 和 vmselect 节点前放置一个 http 负载均衡器，例如 [vmauth](https://docs.victoriametrics.com/vmauth.html) 或 nginx。它必须根据 [url 格式](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#url-format)包含以下路由配置：
 
-An http load balancer such as [vmauth](https://docs.victoriametrics.com/vmauth.html) or `nginx` must be put in front of `vminsert` and `vmselect` nodes. It must contain the following routing configs according to [the url format](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#url-format):
+* 带有 `/insert` 前缀的请求必须被路由到 vminsert 实例的 8480 端口数。
+* 带有 `/select` 前缀的请求必须被路由到 vmselect 实例的 8481 端口数。
 
-* requests starting with `/insert` must be routed to port `8480` on `vminsert` nodes.
-* requests starting with `/select` must be routed to port `8481` on `vmselect` nodes.
+端口可以通过在相应节点上通过 `-httpListenAddr` 参数来设定。
 
-Ports may be altered by setting `-httpListenAddr` on the corresponding nodes.
+建议为集群配置上[监控](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#monitoring)。
 
-It is recommended setting up [monitoring](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#monitoring) for the cluster.
-
-The following tools can simplify cluster setup:
+下面的工具可以简化集群部署：
 
 * [An example docker-compose config for VictoriaMetrics cluster](https://github.com/VictoriaMetrics/VictoriaMetrics/blob/master/deployment/docker/docker-compose-cluster.yml)
 * [Helm charts for VictoriaMetrics](https://github.com/VictoriaMetrics/helm-charts)
 * [Kubernetes operator for VictoriaMetrics](https://github.com/VictoriaMetrics/operator)
 
-It is possible manually setting up a toy cluster on a single host. In this case every cluster component - `vminsert`, `vmselect` and `vmstorage` - must have distinct values for `-httpListenAddr` command-line flag. This flag specifies http address for accepting http requests for [monitoring](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#monitoring) and [profiling](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#profiling). `vmstorage` node must have distinct values for the following additional command-line flags in order to prevent resource usage clash:
+可以在单个主机上手动设置一个玩具集群。在这种情况下，每个集群组件 - vminsert、vmselect 和 vmstorage - 必须使用 `-httpListenAddr` 命令行参数指定不同的端口。此参数指定用于接受用于[监控](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#monitoring)和[Profiling](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#profiling) http 请求的 http 地址。`vmstorage` 节点必须具有以下附加命令行参数的不同值，以防止资源使用冲突：
 
-* `-storageDataPath` - every `vmstorage` node must have a dedicated data storage.
-* `-vminsertAddr` - every `vmstorage` node must listen for a distinct tcp address for accepting data from `vminsert` nodes.
-* `-vmselectAddr` - every `vmstorage` node must listen for a distinct tcp address for accepting requests from `vmselect` nodes.
+* `-storageDataPath` - 每个 `vmstorage` 实例都不行有一个专用的数据存储路径。
+* `-vminsertAddr` - 每个 `vmstorage` 实例必须监听一个 tcp 地址，用来接受 vminsert 发送过来的数据。
+* `-vmselectAddr` - 每个 `vmstorage` 实例必须监听一个 tcp 地址，用来处理 vmselect 发送过来的查询请求。
 
-#### Environment variables <a href="#environment-variables" id="environment-variables"></a>
+#### 环境变量 <a href="#environment-variables" id="environment-variables"></a>
 
-All the VictoriaMetrics components allow referring environment variables in command-line flags via `%{ENV_VAR}` syntax. For example, `-metricsAuthKey=%{METRICS_AUTH_KEY}` is automatically expanded to `-metricsAuthKey=top-secret` if `METRICS_AUTH_KEY=top-secret` environment variable exists at VictoriaMetrics startup. This expansion is performed by VictoriaMetrics itself.
+所有的 VictoriaMetrics 组件都可以在命令行参数中使用`%{ENV_VAR}`语法来引用环境变量。比如，如果 VictoriaMetrics 启动的时候存在环境变量`METRICS_AUTH_KEY=top-secret` ，那么`-metricsAuthKey=%{METRICS_AUTH_KEY}` 参数会自动转换成 `-metricsAuthKey=top-secret`。这个转换是 VictoriaMetrics 内部自己完成的。
 
-VictoriaMetrics recursively expands `%{ENV_VAR}` references in environment variables on startup. For example, `FOO=%{BAR}` environment variable is expanded to `FOO=abc` if `BAR=a%{BAZ}` and `BAZ=bc`.
+VictoriaMetrics 在启动的时候会递归式的对`%{ENV_VAR}` 进行环境变量引用转换。比如，当存在环境变量 `BAR=a%{BAZ}` 和 `BAZ=bc`时，`FOO=%{BAR}` 环境变量会被转换为 `FOO=abc` 。
 
-Additionally, all the VictoriaMetrics components allow setting flag values via environment variables according to these rules:
+所有的 VictoriaMetrics 组件都支持通过上述的环境变量方式来设置参数，前提是：
 
-* The `-envflag.enable` flag must be set
-* Each `.` in flag names must be substituted by `_` (for example `-insert.maxQueueDuration <duration>` will translate to `insert_maxQueueDuration=<duration>`)
-* For repeating flags, an alternative syntax can be used by joining the different values into one using `,` as separator (for example `-storageNode <nodeA> -storageNode <nodeB>` will translate to `storageNode=<nodeA>,<nodeB>`)
-* It is possible setting prefix for environment vars with `-envflag.prefix`. For instance, if `-envflag.prefix=VM_`, then env vars must be prepended with `VM_`
+* 必须使用`-envflag.enable` 参数开启该特性。
+* 命令行参数中的 `.` 必须用下划线`_`替换 (比如 `-insert.maxQueueDuration <duration>` 对应的环境变量是 `insert_maxQueueDuration=<duration>`)。
+* 对于可重复的指定的参数，可用逗号`,`分隔符进行链接。 (比如 `-storageNode <nodeA> -storageNode <nodeB>` 对应的环境变量是 `storageNode=<nodeA>,<nodeB>`)。
+* 可以使用 `-envflag.prefix` 参数来指定环境变量前缀，例如使用了 `-envflag.prefix=VM_`参数，那么环境变量名就都必须以 `VM_` 开头。
 
-### Automatic vmstorage discovery <a href="#automatic-vmstorage-discovery" id="automatic-vmstorage-discovery"></a>
+### vmstorage 自动发现 <a href="#automatic-vmstorage-discovery" id="automatic-vmstorage-discovery"></a>
 
-`vminsert` and `vmselect` components in [enterprise version of VictoriaMetrics](https://docs.victoriametrics.com/enterprise.html) support the following approaches for automatic discovery of `vmstorage` nodes:
+只有企业版支持`vminsert` 和 `vmselect` 对 `vmstorage`实例自动服务发现，开源版的话需要进行二次开发。
 
-* file-based discovery - put the list of `vmstorage` nodes into a file - one node address per each line - and then pass `-storageNode=file:/path/to/file-with-vmstorage-list` to `vminsert` and `vmselect`. It is possible to read the list of vmstorage nodes from http or https urls. For example, `-storageNode=file:http://some-host/vmstorage-list` would read the list of storage nodes from `http://some-host/vmstorage-list`. The list of discovered `vmstorage` nodes is automatically updated when the file contents changes. The update frequency can be controlled with `-storageNode.discoveryInterval` command-line flag.
-* [dns+srv](https://en.wikipedia.org/wiki/SRV\_record) - pass `dns+src:some-name` value to `-storageNode` command-line flag. In this case the provided `dns+srv` names are resolved into tcp addresses of `vmstorage` nodes. The list of discovered `vmstorage` nodes is automatically updated at `vminsert` and `vmselect` when it changes behind the corresponding `dns+srv` names. The update frequency can be controlled with `-storageNode.discoveryInterval` command-line flag.
+VictoriaMetrics 的代码质量很高，所以二次开发也比较简单。只需要参考[netstorage.Init](https://github.com/VictoriaMetrics/VictoriaMetrics/blob/cluster/app/vminsert/netstorage/netstorage.go#L507)实现即可，仅有 2 行代码。这里给出一个代码实现参考：
 
-It is possible passing multiple `file` and `dns+srv` names to `-storageNode` command-line flag. In this case all these names are resolved to tcp addresses of `vmstorage` nodes to connect to. For example, `-storageNode=file:/path/to/local-vmstorage-list -storageNode='dns+srv:vmstorage-hot' -storageNode='dns+srv:vmstorage-cold'`.
+```go
+// ResetStorageNodes initializing new storageNodes by using new addrs, and replace the old global storageNodes
+func ResetStorageNodes(addrs []string, hashSeed uint64) {
+	if len(addrs) == 0 {
+		return
+	}
+	prevSnb := getStorageNodesBucket()
+	snb := initStorageNodes(addrs, hashSeed)
+	setStorageNodesBucket(snb)
+	if prevSnb != nil {
+		go func() {
+			logger.Infof("Storage nodes updated, stopping previous storage nodes")
+			mustStopStorageNodes(prevSnb)
+			logger.Infof("Previous storage nodes already stopped")
+		}()
+	}
+}
+```
 
-It is OK to pass regular static `vmstorage` addresses together with `file` and `dns+srv` addresses at `-storageNode`. For example, `-storageNode=vmstorage1,vmstorage2 -storageNode='dns+srv:vmstorage-autodiscovery'`.
-
-The discovered addresses can be filtered with optional `-storageNode.filter` command-line flag, which can contain arbitrary regular expression filter. For example, `-storageNode.filter='^[^:]+:8400$'` would leave discovered addresses ending with `8400` port only, e.g. the default port used for sending data from `vminsert` to `vmstorage` node according to `-vminsertAddr` command-line flag.
-
-The currently discovered `vmstorage` nodes can be [monitored](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#monitoring) with `vm_rpc_vmstorage_is_reachable` and `vm_rpc_vmstorage_is_read_only` metrics.
+自己实现发现实例列表的库，在库里面调用该`ResetStorageNodes`方法即可。
 
 ### Security <a href="#security" id="security"></a>
 
-General security recommendations:
+一般的安全建议：
 
-* All the VictoriaMetrics cluster components must run in protected private network without direct access from untrusted networks such as Internet.
-* External clients must access `vminsert` and `vmselect` via auth proxy such as [vmauth](https://docs.victoriametrics.com/vmauth.html) or [vmgateway](https://docs.victoriametrics.com/vmgateway.html).
-* The auth proxy must accept auth tokens from untrusted networks only via https in order to protect the auth tokens from eavesdropping.
-* It is recommended using distinct auth tokens for distinct [tenants](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy) in order to reduce potential damage in case of compromised auth token for some tenants.
-* Prefer using lists of allowed [API endpoints](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#url-format), while disallowing access to other endpoints when configuring auth proxy in front of `vminsert` and `vmselect`. This minimizes attack surface.
+* 所有 VictoriaMetrics 集群组件都必须在受保护的私有网络中运行，并且不能被互联网等不受信任的网络直接访问。
+* 外部客户端必须通过身份验证代理（例如 [vmauth](https://docs.victoriametrics.com/vmauth.html) 或 [vmgateway](https://docs.victoriametrics.com/vmgateway.html)）访问 vminsert 和 vmselect。
+* 为了保护身份验证令牌不被窃听，身份验证代理必须仅通过 https 接受来自不受信任网络的身份验证令牌。
+* 建议对不同的[租户](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy)使用不同的身份验证令牌，以减少某些租户的身份验证令牌被泄露时造成的潜在损害。
+* 在 `vminsert` 和 `vmselect` 之前配置身份验证代理时，最好使用允许的 API 接口白名单，同时禁止访问其他接口。这可以最大限度地减少攻击面。
 
-See also [security recommendation for single-node VictoriaMetrics](https://docs.victoriametrics.com/#security) and [the general security page at VictoriaMetrics website](https://victoriametrics.com/security/).
+也可以参考 [security recommendation for single-node VictoriaMetrics](https://docs.victoriametrics.com/#security) 和 [the general security page at VictoriaMetrics website](https://victoriametrics.com/security/).
 
-### mTLS protection <a href="#mtls-protection" id="mtls-protection"></a>
+### mTLS 保护 <a href="#mtls-protection" id="mtls-protection"></a>
 
 By default `vminsert` and `vmselect` nodes use unencrypted connections to `vmstorage` nodes, since it is assumed that all the cluster components [run in a protected environment](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#security). [Enterprise version of VictoriaMetrics](https://docs.victoriametrics.com/enterprise.html) provides optional support for [mTLS connections](https://en.wikipedia.org/wiki/Mutual\_authentication#mTLS) between cluster components. Pass `-cluster.tls=true` command-line flag to `vminsert`, `vmselect` and `vmstorage` nodes in order to enable mTLS protection. Additionally, `vminsert`, `vmselect` and `vmstorage` must be configured with mTLS certificates via `-cluster.tlsCertFile`, `-cluster.tlsKeyFile` command-line options. These certificates are mutually verified when `vminsert` and `vmselect` dial `vmstorage`.
 
@@ -193,7 +203,7 @@ See [these docs](https://gist.github.com/f41gh7/76ed8e5fb1ebb9737fe746bae9175ee6
 
 [Enterprise version of VictoriaMetrics](https://docs.victoriametrics.com/enterprise.html) can be downloaded and evaluated for free from [the releases page](https://github.com/VictoriaMetrics/VictoriaMetrics/releases).
 
-### Monitoring <a href="#monitoring" id="monitoring"></a>
+### 监控 <a href="#monitoring" id="monitoring"></a>
 
 All the cluster components expose various metrics in Prometheus-compatible format at `/metrics` page on the TCP port set in `-httpListenAddr` command-line flag. By default, the following TCP ports are used:
 
@@ -205,90 +215,91 @@ It is recommended setting up [vmagent](https://docs.victoriametrics.com/vmagent.
 
 It is recommended setting up alerts in [vmalert](https://docs.victoriametrics.com/vmalert.html) or in Prometheus from [this config](https://github.com/VictoriaMetrics/VictoriaMetrics/blob/cluster/deployment/docker/alerts.yml). See more details in the article [VictoriaMetrics Monitoring](https://victoriametrics.com/blog/victoriametrics-monitoring/).
 
-### Cardinality limiter <a href="#cardinality-limiter" id="cardinality-limiter"></a>
+### 基数限制 <a href="#cardinality-limiter" id="cardinality-limiter"></a>
 
-`vmstorage` nodes can be configured with limits on the number of unique time series across all the tenants with the following command-line flags:
+`vmstorage` 实例可以通过下面的命令行来限制所有租户总共 series 的数量
 
-* `-storage.maxHourlySeries` is the limit on the number of [active time series](https://docs.victoriametrics.com/FAQ.html#what-is-an-active-time-series) during the last hour.
-* `-storage.maxDailySeries` is the limit on the number of unique time series during the day. This limit can be used for limiting daily [time series churn rate](https://docs.victoriametrics.com/FAQ.html#what-is-high-churn-rate).
+* `-storage.maxHourlySeries`  限制最近1小时的[活跃时间序列](https://docs.victoriametrics.com/FAQ.html#what-is-an-active-time-series)的数量。
+* `-storage.maxDailySeries` 限制最近一天的[活跃时间序列](https://docs.victoriametrics.com/FAQ.html#what-is-an-active-time-series)的数量。这个限制可以用于限制天级别的 [time series churn rate](https://docs.victoriametrics.com/FAQ.html#what-is-high-churn-rate).
 
-Note that these limits are set and applied individually per each `vmstorage` node in the cluster. So, if the cluster has `N` `vmstorage` nodes, then the cluster-level limits will be `N` times bigger than the per-`vmstorage` limits.
+请注意，这些限制是针对集群中的每个 vmstorage 实例的。因此，如果集群有 `N` 个 `vmstorage` 节点，则整个集群级限制将比每个 `vmstorage` 限制大 `N` 倍。
 
-See more details about cardinality limiter in [these docs](https://docs.victoriametrics.com/#cardinality-limiter).
+关于更多的基数限制可以看[这些文档](https://docs.victoriametrics.com/#cardinality-limiter)。&#x20;
 
-### Troubleshooting <a href="#troubleshooting" id="troubleshooting"></a>
+### 问题排查 <a href="#troubleshooting" id="troubleshooting"></a>
 
-See [troubleshooting docs](https://docs.victoriametrics.com/Troubleshooting.html).
+请看[问题排查文档](https://docs.victoriametrics.com/Troubleshooting.html)。
 
-### Readonly mode <a href="#readonly-mode" id="readonly-mode"></a>
+### 只读模式 <a href="#readonly-mode" id="readonly-mode"></a>
 
 `vmstorage` nodes automatically switch to readonly mode when the directory pointed by `-storageDataPath` contains less than `-storage.minFreeDiskSpaceBytes` of free space. `vminsert` nodes stop sending data to such nodes and start re-routing the data to the remaining `vmstorage` nodes.
 
 `vmstorage` sets `vm_storage_is_read_only` metric at `http://vmstorage:8482/metrics` to `1` when it enters read-only mode. The metric is set to `0` when the `vmstorage` isn't in read-only mode.
 
-### URL format <a href="#url-format" id="url-format"></a>
+### API接口 <a href="#url-format" id="url-format"></a>
 
-The main differences between URL formats of cluster and [Single server](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html) versions are that cluster has separate components for read and ingestion path, and because of multi-tenancy support. Also in the cluster version the `/prometheus/api/v1` endpoint ingests `jsonl`, `csv`, `native` and `prometheus` data formats **not** only `prometheus` data. Check practical examples of VictoriaMetrics API [here](https://docs.victoriametrics.com/url-examples.html).
+集群版本和[单机版](dan-ji-ban-ben.md)的API接口主要区别是数据的读取和写入是由独立组件完成的，而且也有了租户的支持。集群版本也支持`/prometheus/api/v1`来接收 `jsonl`, `csv`, `native` 和 `prometheus`数据格式，而不仅仅是`prometheus`数据格式。可以在[这里](https://docs.victoriametrics.com/url-examples.html)查看VictoriaMetrics的API的使用范例。
 
-* URLs for data ingestion: `http://<vminsert>:8480/insert/<accountID>/<suffix>`, where:
-  * `<accountID>` is an arbitrary 32-bit integer identifying namespace for data ingestion (aka tenant). It is possible to set it as `accountID:projectID`, where `projectID` is also arbitrary 32-bit integer. If `projectID` isn't set, then it equals to `0`. See [multitenancy docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy) for more details. The `<accountID>` can be set to `multitenant` string, e.g. `http://<vminsert>:8480/insert/multitenant/<suffix>`. Such urls accept data from multiple tenants specified via `vm_account_id` and `vm_project_id` labels. See [multitenancy via labels](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy-via-labels) for more details.
-  * `<suffix>` may have the following values:
-    * `prometheus` and `prometheus/api/v1/write` - for inserting data with [Prometheus remote write API](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#remote\_write).
-    * `prometheus/api/v1/import` - for importing data obtained via `api/v1/export` at `vmselect` (see below), JSON line format.
-    * `prometheus/api/v1/import/native` - for importing data obtained via `api/v1/export/native` on `vmselect` (see below).
-    * `prometheus/api/v1/import/csv` - for importing arbitrary CSV data. See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-import-csv-data) for details.
-    * `prometheus/api/v1/import/prometheus` - for importing data in [Prometheus text exposition format](https://github.com/prometheus/docs/blob/master/content/docs/instrumenting/exposition\_formats.md#text-based-format) and in [OpenMetrics format](https://github.com/OpenObservability/OpenMetrics/blob/master/specification/OpenMetrics.md). This endpoint also supports [Pushgateway protocol](https://github.com/prometheus/pushgateway#url). See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-import-data-in-prometheus-exposition-format) for details.
-    * `datadog/api/v1/series` - for inserting data with [DataDog submit metrics API](https://docs.datadoghq.com/api/latest/metrics/#submit-metrics). See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-send-data-from-datadog-agent) for details.
-    * `influx/write` and `influx/api/v2/write` - for inserting data with [InfluxDB line protocol](https://docs.influxdata.com/influxdb/v1.7/write\_protocols/line\_protocol\_tutorial/). See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-send-data-from-influxdb-compatible-agents-such-as-telegraf) for details.
-    * `opentsdb/api/put` - for accepting [OpenTSDB HTTP /api/put requests](http://opentsdb.net/docs/build/html/api\_http/put.html). This handler is disabled by default. It is exposed on a distinct TCP address set via `-opentsdbHTTPListenAddr` command-line flag. See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#sending-opentsdb-data-via-http-apiput-requests) for details.
-* URLs for [Prometheus querying API](https://prometheus.io/docs/prometheus/latest/querying/api/): `http://<vmselect>:8481/select/<accountID>/prometheus/<suffix>`, where:
-  * `<accountID>` is an arbitrary number identifying data namespace for the query (aka tenant)
-  * `<suffix>` may have the following values:
-    * `api/v1/query` - performs [PromQL instant query](https://docs.victoriametrics.com/keyConcepts.html#instant-query).
-    * `api/v1/query_range` - performs [PromQL range query](https://docs.victoriametrics.com/keyConcepts.html#range-query).
-    * `api/v1/series` - performs [series query](https://prometheus.io/docs/prometheus/latest/querying/api/#finding-series-by-label-matchers).
-    * `api/v1/labels` - returns a [list of label names](https://prometheus.io/docs/prometheus/latest/querying/api/#getting-label-names).
-    * `api/v1/label/<label_name>/values` - returns values for the given `<label_name>` according [to API](https://prometheus.io/docs/prometheus/latest/querying/api/#querying-label-values).
-    * `federate` - returns [federated metrics](https://prometheus.io/docs/prometheus/latest/federation/).
-    * `api/v1/export` - exports raw data in JSON line format. See [this article](https://medium.com/@valyala/analyzing-prometheus-data-with-external-tools-5f3e5e147639) for details.
-    * `api/v1/export/native` - exports raw data in native binary format. It may be imported into another VictoriaMetrics via `api/v1/import/native` (see above).
-    * `api/v1/export/csv` - exports data in CSV. It may be imported into another VictoriaMetrics via `api/v1/import/csv` (see above).
-    * `api/v1/series/count` - returns the total number of series.
-    * `api/v1/status/tsdb` - for time series stats. See [these docs](https://docs.victoriametrics.com/#tsdb-stats) for details.
-    * `api/v1/status/active_queries` - for currently executed active queries. Note that every `vmselect` maintains an independent list of active queries, which is returned in the response.
-    * `api/v1/status/top_queries` - for listing the most frequently executed queries and queries taking the most duration.
-    * `metric-relabel-debug` - for debugging [relabeling rules](https://docs.victoriametrics.com/relabeling.html).
-* URLs for [Graphite Metrics API](https://graphite-api.readthedocs.io/en/latest/api.html#the-metrics-api): `http://<vmselect>:8481/select/<accountID>/graphite/<suffix>`, where:
-  * `<accountID>` is an arbitrary number identifying data namespace for query (aka tenant)
-  * `<suffix>` may have the following values:
-    * `render` - implements Graphite Render API. See [these docs](https://graphite.readthedocs.io/en/stable/render\_api.html).
-    * `metrics/find` - searches Graphite metrics. See [these docs](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-find).
-    * `metrics/expand` - expands Graphite metrics. See [these docs](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-expand).
-    * `metrics/index.json` - returns all the metric names. See [these docs](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-index-json).
-    * `tags/tagSeries` - registers time series. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#adding-series-to-the-tagdb).
-    * `tags/tagMultiSeries` - register multiple time series. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#adding-series-to-the-tagdb).
-    * `tags` - returns tag names. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#exploring-tags).
-    * `tags/<tag_name>` - returns tag values for the given `<tag_name>`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#exploring-tags).
-    * `tags/findSeries` - returns series matching the given `expr`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#exploring-tags).
-    * `tags/autoComplete/tags` - returns tags matching the given `tagPrefix` and/or `expr`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#auto-complete-support).
-    * `tags/autoComplete/values` - returns tag values matching the given `valuePrefix` and/or `expr`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#auto-complete-support).
+* 用于数据写入的 URLs 是：`http://<vminsert>:8480/insert/<accountID>/<suffix>`，其中：
+* `<accountID>` 是一个任意的32位数字，用来表示数据写入的空间（即租户）。也可以设置成`accountID:projectID`格式，其中 `projectID` 也是一个任意的32位数字。如果 `projectID` 没有指定,则默认是`0`。更多信息可以看[多租户文档](ji-qun-ban-ben.md#multitenancy)。 这里的`<accountID>` 可以使用字符串 `multitenant` ， 比如 `http://<vminsert>:8480/insert/multitenant/<suffix>`，该 URL 接受到的数据会将数据的 `vm_account_id` 和 `vm_project_id` label 视为租户信息。更多信息请看[通过label实现多租户](ji-qun-ban-ben.md#multitenancy-via-labels)。
+* `<suffix>` 可以是以下这些内容：
+  * `prometheus` 和 `prometheus/api/v1/write` - 用来写入 [Prometheus Remote Write](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#remote\_write) 数据协议的接口。
+  * `prometheus/api/v1/import` - 用来导入通过`vmselect`的 `api/v1/export` 接口导出来的数据（见下文）, 是 JSON line 的格式.
+  * `prometheus/api/v1/import/native` - 用来导入通过vmselect的`api/v1/export/native` 接口导出的数据（见下文）。
+  * `prometheus/api/v1/import/csv` - 用来导入 CSV 数据。详细信息见[文档](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-import-csv-data)。
+  * `prometheus/api/v1/import/prometheus` - 用来导入 [Prometheus text exposition ](https://github.com/prometheus/docs/blob/master/content/docs/instrumenting/exposition\_formats.md#text-based-format) 或 [OpenMetrics ](https://github.com/OpenObservability/OpenMetrics/blob/master/specification/OpenMetrics.md)格式的数据。该接口也支持 [Pushgateway 协议](https://github.com/prometheus/pushgateway#url)。 更多信息看[这些文档](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-import-data-in-prometheus-exposition-format)。
+  * `datadog/api/v1/series` - 用来写入 [DataDog submit metrics ](https://docs.datadoghq.com/api/latest/metrics/#submit-metrics)接口。 更多信息见[这些文档](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-send-data-from-datadog-agent)。
+  * `influx/write` and `influx/api/v2/write` - 用来写入 [InfluxDB line protocol](https://docs.influxdata.com/influxdb/v1.7/write\_protocols/line\_protocol\_tutorial/)的数据，更多信息见[这些文档](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-send-data-from-influxdb-compatible-agents-such-as-telegraf)。
+  * `opentsdb/api/put` - 用来处理 [OpenTSDB HTTP /api/put 请求](http://opentsdb.net/docs/build/html/api\_http/put.html)。这个接口默认是关闭的。他是通过一个独立的 TCP 地址暴露的，改地址可通过`-opentsdbHTTPListenAddr` 命令行参数指定。更多信息见[这些文档](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#sending-opentsdb-data-via-http-apiput-requests)。
+* [Prometheus 查询 API](https://prometheus.io/docs/prometheus/latest/querying/api/): `http://<vmselect>:8481/select/<accountID>/prometheus/<suffix>`, 其中:
+  * `<accountID>` 是一个任意32位数字，用来标识查询的空间（即租户）。
+  * `<suffix>` 可以是一下的内容：
+    * `api/v1/query` - 执行 [PromQL instant ](https://docs.victoriametrics.com/keyConcepts.html#instant-query).
+    * `api/v1/query_range` - 执行 [PromQL range 查询](https://docs.victoriametrics.com/keyConcepts.html#range-query)。
+    * `api/v1/series` - 执行 [series 查询](https://prometheus.io/docs/prometheus/latest/querying/api/#finding-series-by-label-matchers)。
+    * `api/v1/labels` - 返回 [label 名称列表](https://prometheus.io/docs/prometheus/latest/querying/api/#getting-label-names)。
+    * `api/v1/label/<label_name>/values` - 返回指定 `<label_name>` 的所有值，参考[这个 API](https://prometheus.io/docs/prometheus/latest/querying/api/#querying-label-values).
+    * `federate` - 返回 [federated metrics](https://prometheus.io/docs/prometheus/latest/federation/).
+    * `api/v1/export` - 导出 JSON line 格式的原始数据，更多信息看[这篇文章](https://medium.com/@valyala/analyzing-prometheus-data-with-external-tools-5f3e5e147639)。
+    * `api/v1/export/native` - 导出原生二进制格式的原始数据，该数据可以通过另一个接口`api/v1/import/native`导入到 VictoriaMetrics (见上文).
+    * `api/v1/export/csv` - 导出 CSV 格式原始数据。它可以使用另外一个接口 `api/v1/import/csv` 导入到 VictoriaMetrics（见上文）。
+    * `api/v1/series/count` - 返回 series 的总数。
+    * `api/v1/status/tsdb` - 返回时序数据的统计信息。更多详细信息见[这些文档](https://docs.victoriametrics.com/#tsdb-stats)。
+    * `api/v1/status/active_queries` - 返回当前活跃的查询请求。逐一每个 `vmselect` 实例都有独立的活跃查询列表。
+    * `api/v1/status/top_queries` - 返回执行频率最高以及查询耗时最长的查询列表。
+    * `metric-relabel-debug` - 用于对 [relabeling 规则](https://docs.victoriametrics.com/relabeling.html) Debug。
+* [Graphite Metrics API](https://graphite-api.readthedocs.io/en/latest/api.html#the-metrics-api)：`http://<vmselect>:8481/select/<accountID>/graphite/<suffix>`, 其中:
+  * `<accountID>`&#x20;
+  * &#x20;是一个任意32位数字，用来标识查询的空间（即租户）。
+  * `<suffix>` 可以是一下的内容：
+    * `render` - 实现 Graphite Render API. 看 [these docs](https://graphite.readthedocs.io/en/stable/render\_api.html).
+    * `metrics/find` - 搜索 Graphite metrics. See [these docs](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-find).
+    * `metrics/expand` - 扩展 Graphite metrics. See [these docs](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-expand).
+    * `metrics/index.json` - returns 所有的 names. See [these docs](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-index-json).
+    * `tags/tagSeries` - 注册 time series. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#adding-series-to-the-tagdb).
+    * `tags/tagMultiSeries` - 批量注册 time series. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#adding-series-to-the-tagdb).
+    * `tags` - 返回 tag 名称列表. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#exploring-tags).
+    * `tags/<tag_name>` - 返回指定 `<tag_name>`的值列表 See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#exploring-tags).
+    * `tags/findSeries` - 返回匹配`expr`的 series，[these docs](https://graphite.readthedocs.io/en/stable/tags.html#exploring-tags).
+    * `tags/autoComplete/tags` - 返回匹配 `tagPrefix` 和/或 `expr`的tag名称列表。 See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#auto-complete-support).
+    * `tags/autoComplete/values` - 返回匹配 `valuePrefix` 和/或 `expr` tag值列表 See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#auto-complete-support).
     * `tags/delSeries` - deletes series matching the given `path`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#removing-series-from-the-tagdb).
-* URL with basic Web UI: `http://<vmselect>:8481/select/<accountID>/vmui/`.
-* URL for query stats across all tenants: `http://<vmselect>:8481/api/v1/status/top_queries`. It lists with the most frequently executed queries and queries taking the most duration.
-* URL for time series deletion: `http://<vmselect>:8481/delete/<accountID>/prometheus/api/v1/admin/tsdb/delete_series?match[]=<timeseries_selector_for_delete>`. Note that the `delete_series` handler should be used only in exceptional cases such as deletion of accidentally ingested incorrect time series. It shouldn't be used on a regular basis, since it carries non-zero overhead.
-* URL for listing [tenants](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy) with the ingested data on the given time range: `http://<vmselect>:8481/admin/tenants?start=...&end=...` . The `start` and `end` query args are optional. If they are missing, then all the tenants with at least one sample stored in VictoriaMetrics are returned.
-* URL for accessing [vmalerts](https://docs.victoriametrics.com/vmalert.html) UI: `http://<vmselect>:8481/select/<accountID>/prometheus/vmalert/`. This URL works only when `-vmalert.proxyURL` flag is set. See more about vmalert [here](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#vmalert).
-*   `vmstorage` nodes provide the following HTTP endpoints on `8482` port:
+* 基础的 Web UI: `http://<vmselect>:8481/select/<accountID>/vmui/`.
+* 统计所有租户的查询：`http://<vmselect>:8481/api/v1/status/top_queries`。它会列出请求最频繁，以及执行时间最长的查询列表。
+* 删除时间序列：`http://<vmselect>:8481/delete/<accountID>/prometheus/api/v1/admin/tsdb/delete_series?match[]=<timeseries_selector_for_delete>`。 请注意，`delete_series` 处理程序应仅在特殊情况下使用，例如删除意外提取的错误时间序列。它不应定期使用，因为它会带来额外的系统开销。
+* 列出在给定时间范围内已提取数据的租户： `http://<vmselect>:8481/admin/tenants?start=...&end=...`。`start` 和 `end` 参数是可选的。默认返回 VictoriaMetrics 集群中至少包含一条数据的租户列表。
+* &#x20;[vmalerts](https://docs.victoriametrics.com/vmalert.html) UI 界面： `http://<vmselect>:8481/select/<accountID>/prometheus/vmalert/`。这个 URL works only 只有在指定了 `-vmalert.proxyURL` 参数时才有效。关于 vmalert 的跟多内容[参考这里](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#vmalert)。&#x20;
+*   `vmstorage` 在 8482 端口上提供了如下接口：
 
-    * `/internal/force_merge` - initiate [forced compactions](https://docs.victoriametrics.com/#forced-merge) on the given `vmstorage` node.
-    * `/snapshot/create` - create [instant snapshot](https://medium.com/@valyala/how-victoriametrics-makes-instant-snapshots-for-multi-terabyte-time-series-data-e1f3fb0e0282), which can be used for backups in background. Snapshots are created in `<storageDataPath>/snapshots` folder, where `<storageDataPath>` is the corresponding command-line flag value.
-    * `/snapshot/list` - list available snapshots.
-    * `/snapshot/delete?snapshot=<id>` - delete the given snapshot.
-    * `/snapshot/delete_all` - delete all the snapshots.
+    * `/internal/force_merge` - 强制启动 vmstorage 实例的[数据合并压缩](https://docs.victoriametrics.com/#forced-merge)。
+    * `/snapshot/create` - 创建[实例快照](https://medium.com/@valyala/how-victoriametrics-makes-instant-snapshots-for-multi-terabyte-time-series-data-e1f3fb0e0282)，可用于后台备份。快照在`<storageDataPath>/snapshots` 文件夹中创建，其中`<storageDataPath>`是通过相应的命令行参数指定。
+    * `/snapshot/list` - 列出可用的快照。
+    * `/snapshot/delete?snapshot=<id>` - 删除给定的快照。
+    * `/snapshot/delete_all` - 删除所有快照。
 
-    Snapshots may be created independently on each `vmstorage` node. There is no need in synchronizing snapshots' creation across `vmstorage` nodes.
+    快照可以在每个 `vmstorage` 节点上独立创建。无需在 `vmstorage` 节点之间同步快照的创建。
 
-### Cluster resizing and scalability <a href="#cluster-resizing-and-scalability" id="cluster-resizing-and-scalability"></a>
+### 集群扩缩容 <a href="#cluster-resizing-and-scalability" id="cluster-resizing-and-scalability"></a>
 
 Cluster performance and capacity can be scaled up in two ways:
 
@@ -309,13 +320,13 @@ Steps to add `vmstorage` node:
 2. Gradually restart all the `vmselect` nodes with new `-storageNode` arg containing `<new_vmstorage_host>`.
 3. Gradually restart all the `vminsert` nodes with new `-storageNode` arg containing `<new_vmstorage_host>`.
 
-### Updating / reconfiguring cluster nodes <a href="#updating--reconfiguring-cluster-nodes" id="updating--reconfiguring-cluster-nodes"></a>
+### 升级集群节点 <a href="#updating--reconfiguring-cluster-nodes" id="updating--reconfiguring-cluster-nodes"></a>
 
 All the node types - `vminsert`, `vmselect` and `vmstorage` - may be updated via graceful shutdown. Send `SIGINT` signal to the corresponding process, wait until it finishes and then start new version with new configs.
 
 There are the following cluster update / upgrade approaches exist:
 
-#### No downtime strategy <a href="#no-downtime-strategy" id="no-downtime-strategy"></a>
+#### 无停机策略 <a href="#no-downtime-strategy" id="no-downtime-strategy"></a>
 
 Gracefully restart every node in the cluster one-by-one with the updated config / upgraded binary.
 
@@ -333,7 +344,7 @@ This strategy allows upgrading the cluster without downtime if the following con
 
     If at least a single condition isn't met, then the rolling restart may result in cluster unavailability during the config update / version upgrade. In this case the following strategy is recommended.
 
-#### Minimum downtime strategy <a href="#minimum-downtime-strategy" id="minimum-downtime-strategy"></a>
+#### 最小停机策略 <a href="#minimum-downtime-strategy" id="minimum-downtime-strategy"></a>
 
 1. Gracefully stop all the `vminsert` and `vmselect` nodes in parallel.
 2. Gracefully restart all the `vmstorage` nodes in parallel.
@@ -345,7 +356,7 @@ The cluster is unavailable for data ingestion and querying when performing the s
 * It allows performing config update / version upgrade with minimum disruption when the cluster has no enough compute resources (CPU, RAM, disk IO, network bandwidth) for rolling upgrade.
 * It allows minimizing the duration of config update / version upgrade for clusters with big number of nodes of for clusters with big `vmstorage` nodes, which may take long time for graceful restart.
 
-### Cluster availability <a href="#cluster-availability" id="cluster-availability"></a>
+### 集群可用性 <a href="#cluster-availability" id="cluster-availability"></a>
 
 VictoriaMetrics cluster architecture prioritizes availability over data consistency. This means that the cluster remains available for data ingestion and data querying if some of its components are temporarily unavailable.
 
@@ -367,7 +378,7 @@ The cluster works in the following way when some of `vmstorage` nodes are unavai
 
 Data replication can be used for increasing storage durability. See [these docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#replication-and-data-safety) for details.
 
-### Capacity planning <a href="#capacity-planning" id="capacity-planning"></a>
+### 容量规划 <a href="#capacity-planning" id="capacity-planning"></a>
 
 VictoriaMetrics uses lower amounts of CPU, RAM and storage space on production workloads compared to competing solutions (Prometheus, Thanos, Cortex, TimescaleDB, InfluxDB, QuestDB, M3DB) according to [our case studies](https://docs.victoriametrics.com/CaseStudies.html).
 
@@ -393,7 +404,7 @@ Some capacity planning tips for VictoriaMetrics cluster:
 
 See also [resource usage limits docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#resource-usage-limits).
 
-### Resource usage limits <a href="#resource-usage-limits" id="resource-usage-limits"></a>
+### 资源使用限制 <a href="#resource-usage-limits" id="resource-usage-limits"></a>
 
 By default, cluster components of VictoriaMetrics are tuned for an optimal resource usage under typical workloads. Some workloads may need fine-grained resource usage limits. In these cases the following command-line flags may be useful:
 
@@ -416,7 +427,7 @@ By default, cluster components of VictoriaMetrics are tuned for an optimal resou
 
 See also [capacity planning docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#capacity-planning) and [cardinality limiter in vmagent](https://docs.victoriametrics.com/vmagent.html#cardinality-limiter).
 
-### High availability <a href="#high-availability" id="high-availability"></a>
+### 高可用 <a href="#high-availability" id="high-availability"></a>
 
 The database is considered highly available if it continues accepting new data and processing incoming queries when some of its components are temporarily unavailable. VictoriaMetrics cluster is highly available according to this definition - see [cluster availability docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#cluster-availability).
 
@@ -424,7 +435,7 @@ It is recommended to run all the components for a single cluster in the same sub
 
 If you need multi-AZ setup, then it is recommended running independent clusters in each AZ and setting up [vmagent](https://docs.victoriametrics.com/vmagent.html) in front of these clusters, so it could replicate incoming data into all the cluster - see [these docs](https://docs.victoriametrics.com/vmagent.html#multitenancy) for details. Then an additional `vmselect` nodes can be configured for reading the data from multiple clusters according to [these docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multi-level-cluster-setup).
 
-### Multi-level cluster setup <a href="#multi-level-cluster-setup" id="multi-level-cluster-setup"></a>
+### 多层联邦部署 <a href="#multi-level-cluster-setup" id="multi-level-cluster-setup"></a>
 
 `vmselect` nodes can be queried by other `vmselect` nodes if they run with `-clusternativeListenAddr` command-line flag. For example, if `vmselect` is started with `-clusternativeListenAddr=:8401`, then it can accept queries from another `vmselect` nodes at TCP port 8401 in the same way as `vmstorage` nodes do. This allows chaining `vmselect` nodes and building multi-level cluster topologies. For example, the top-level `vmselect` node can query second-level `vmselect` nodes in different availability zones (AZ), while the second-level `vmselect` nodes can query `vmstorage` nodes in local AZ.
 
@@ -445,7 +456,7 @@ Helm chart simplifies managing cluster version of VictoriaMetrics in Kubernetes.
 
 [K8s operator](https://github.com/VictoriaMetrics/operator) simplifies managing VictoriaMetrics components in Kubernetes.
 
-### Replication and data safety <a href="#replication-and-data-safety" id="replication-and-data-safety"></a>
+### 副本和数据安全 <a href="#replication-and-data-safety" id="replication-and-data-safety"></a>
 
 By default, VictoriaMetrics offloads replication to the underlying storage pointed by `-storageDataPath` such as [Google compute persistent disk](https://cloud.google.com/compute/docs/disks#pdspecs), which guarantees data durability. VictoriaMetrics supports application-level replication if replicated durable persistent disks cannot be used for some reason.
 
@@ -461,7 +472,7 @@ Note that [replication doesn't save from disaster](https://medium.com/@valyala/s
 
 Note that the replication increases resource usage - CPU, RAM, disk space, network bandwidth - by up to `-replicationFactor=N` times, because `vminsert` stores `N` copies of incoming data to distinct `vmstorage` nodes and `vmselect` needs to de-duplicate the replicated data obtained from `vmstorage` nodes during querying. So it is more cost-effective to offload the replication to underlying replicated durable storage pointed by `-storageDataPath` such as [Google Compute Engine persistent disk](https://cloud.google.com/compute/docs/disks/#pdspecs), which is protected from data loss and data corruption. It also provides consistently high performance and [may be resized](https://cloud.google.com/compute/docs/disks/add-persistent-disk) without downtime. HDD-based persistent disks should be enough for the majority of use cases. It is recommended using durable replicated persistent volumes in Kubernetes.
 
-### Deduplication <a href="#deduplication" id="deduplication"></a>
+### 去重机制 <a href="#deduplication" id="deduplication"></a>
 
 Cluster version of VictoriaMetrics supports data deduplication in the same way as single-node version do. See [these docs](https://docs.victoriametrics.com/#deduplication) for details. The only difference is that the same `-dedup.minScrapeInterval` command-line flag value must be passed to both `vmselect` and `vmstorage` nodes because of the following aspects:
 
@@ -471,7 +482,7 @@ By default, `vminsert` tries to route all the samples for a single time series t
 * when `vmstorage` nodes are temporarily unavailable (for instance, during their restart). Then new samples are re-routed to the remaining available `vmstorage` nodes;
 * when `vmstorage` node has no enough capacity for processing incoming data stream. Then `vminsert` re-routes new samples to other `vmstorage` nodes.
 
-### Backups <a href="#backups" id="backups"></a>
+### 备份 <a href="#backups" id="backups"></a>
 
 It is recommended performing periodical backups from [instant snapshots](https://medium.com/@valyala/how-victoriametrics-makes-instant-snapshots-for-multi-terabyte-time-series-data-e1f3fb0e0282) for protecting from user errors such as accidental data deletion.
 
@@ -489,35 +500,25 @@ Restoring from backup:
 2. Restore data from backup using [vmrestore](https://docs.victoriametrics.com/vmrestore.html) into `-storageDataPath` directory.
 3. Start `vmstorage` node.
 
-### Retention filters <a href="#retention-filters" id="retention-filters"></a>
+### 保存时间过滤器 <a href="#retention-filters" id="retention-filters"></a>
 
-[VictoriaMetrics enterprise](https://docs.victoriametrics.com/enterprise.html) supports configuring multiple retentions for distinct sets of time series by passing `-retentionFilter` command-line flag to `vmstorage` nodes. See [these docs](https://docs.victoriametrics.com/#retention-filters) for details on this feature.
+VictoriaMetrics 企业版支持通过 label filter 来配置多种数据保留时间，通过 vmstorage 的命令行参数 `-retentionFilter` 来指定。
 
-Additionally, enterprise version of VictoriaMetrics cluster supports multiple retentions for distinct sets of [tenants](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy) by specifying filters on `vm_account_id` and/or `vm_project_id` pseudo-labels in `-retentionFilter` command-line flag. If the tenant doesn't match specified `-retentionFilter` options, then the global `-retentionPeriod` is used for it.
+例如，以下配置将 accountID 从 42 开始的租户的保留期设置为 1 天，然后将任何租户的标签 env="dev" 或 env="prod" 的时间序列的保留期设置为 3 天，而其余租户的保留期为 4 周：
 
-For example, the following config sets retention to 1 day for [tenants](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy) with `accountID` starting from `42`, then sets retention to 3 days for time series with label `env="dev"` or `env="prod"` from any tenant, while the rest of tenants will have 4 weeks retention:
-
-```
--retentionFilter='{vm_account_id=~"42.*"}:1d' -retentionFilter='{env=~"dev|staging"}:3d' -retentionPeriod=4w
+```sh
+-retentionFilter='{vm_account_id=~"42.*"}:1d' -retentionFilter='{env=~"dev|staging"}:3d' -retentionPeriod=4w'
 ```
 
-It is OK to mix filters on real labels with filters on `vm_account_id` and `vm_project_id` pseudo-labels. For example, the following config sets retention to 5 days for time series with `env="dev"` label from [tenant](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy) `accountID=5`:
+更多关于保存时间过滤器的详细内容，可以阅读[这些文档](https://docs.victoriametrics.com/#retention-filters)。
 
-```
--retentionFilter='{vm_account_id="5",env="dev"}:5d'
-```
-
-See also [these docs](https://docs.victoriametrics.com/#retention-filters) for additional details on retention filters.
-
-Enterprise binaries can be downloaded and evaluated for free from [the releases page](https://github.com/VictoriaMetrics/VictoriaMetrics/releases).
-
-### Downsampling <a href="#downsampling" id="downsampling"></a>
+### 降采样 <a href="#downsampling" id="downsampling"></a>
 
 Downsampling is available in [enterprise version of VictoriaMetrics](https://docs.victoriametrics.com/enterprise.html). It is configured with `-downsampling.period` command-line flag. The same flag value must be passed to both `vmstorage` and `vmselect` nodes. See [these docs](https://docs.victoriametrics.com/#downsampling) for details.
 
 Enterprise binaries can be downloaded and evaluated for free from [the releases page](https://github.com/VictoriaMetrics/VictoriaMetrics/releases).
 
-### Profiling <a href="#profiling" id="profiling"></a>
+### 性能分析 <a href="#profiling" id="profiling"></a>
 
 All the cluster components provide the following handlers for [profiling](https://blog.golang.org/profiling-go-programs):
 
