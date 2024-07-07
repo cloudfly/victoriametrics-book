@@ -1,6 +1,8 @@
 # HTTP 接口
 
-## Prometheus 查询接口 <a href="#prometheus-querying-api-usage" id="prometheus-querying-api-usage"></a>
+## 单机版 <a href="#prometheus-querying-api-usage" id="prometheus-querying-api-usage"></a>
+
+### Prometheus 查询接口 <a href="#prometheus-querying-api-usage" id="prometheus-querying-api-usage"></a>
 
 VictoriaMetrics 支持下面这些 [Prometheus 查询 API](https://prometheus.io/docs/prometheus/latest/querying/api/):
 
@@ -15,7 +17,7 @@ VictoriaMetrics 支持下面这些 [Prometheus 查询 API](https://prometheus.io
 
 这些接口可以被Prometheus兼容的客户端（如Grafana或curl）查询。所有Prometheus查询API处理程序都可以使用`/prometheus`前缀进行查询。例如，`/prometheus/api/v1/query`和`/api/v1/query`都可以正常工作。
 
-### 查询优化 <a href="#prometheus-querying-api-enhancements" id="prometheus-querying-api-enhancements"></a>
+#### 查询优化 <a href="#prometheus-querying-api-enhancements" id="prometheus-querying-api-enhancements"></a>
 
 VictoriaMetrics接受`extra_label=<label_name>=<label_value>`查询参数（可选），可以用于强制使用额外 Label 过滤器执行查询。例如，`/api/v1/query_range?extra_label=user_id=123&extra_label=group_id=456&query=<query>`会自动将`{user_id="123",group_id="456"}`Label 过滤器添加到给定的查询中。此功能可用于限制给定租户可见的 timeseries 范围。一般`extra_label`查询参数由位于 VictoriaMetrics 前面的查询代理服务自动设置。例如，可以参考使用[vmauth](https://docs.victoriametrics.com/vmauth.html)和[vmgateway](https://docs.victoriametrics.com/vmgateway.html)作为查询代理的示例。
 
@@ -48,7 +50,7 @@ VictoriaMetrics在[`/api/v1/series`](https://docs.victoriametrics.com/url-exampl
 
     返回的查询个数可以使用 `topN` 参数进行限制。历史查询可以使用 `maxLifetime` 参数过滤掉。比如，请求`/api/v1/status/top_queries?topN=5&maxLifetime=30s`返回最近 30 秒内每个类型的 Top5 个查询列表。VictoriaMetrics 会跟踪统计最近`-s earch.queryStats.lastQueriesCount`时间内，且执行时间大于`search.queryStats.minQueryDuration`的查询。
 
-### Timestamp 格式 <a href="#timestamp-formats" id="timestamp-formats"></a>
+#### Timestamp 格式 <a href="#timestamp-formats" id="timestamp-formats"></a>
 
 VictoriaMetrics 接受下面这些格式的 `time`, `start` and `end` 参数， 在 [query APIs](https://docs.victoriametrics.com/#prometheus-querying-api-usage) 和 [export APIs](https://docs.victoriametrics.com/#how-to-export-time-series) 中皆是如此。
 
@@ -58,40 +60,38 @@ VictoriaMetrics 接受下面这些格式的 `time`, `start` and `end` 参数， 
 * RFC3339 的省略格式。比如：`2022`, `2022-03`, `2022-03-29`, `2022-03-29T01`, `2022-03-29T01:02`, `2022-03-29T01:02:03`。该 RFC3339 格式默认是使用 UTC 时区的。可以使用 `+hh:mm` or `-hh:mm` 后缀来指定时区。比如，`2022-03-01+06:30` 代表 `2022-03-01` 是 `06:30` 时区。
 * 基于当前时间的相对时间。比如，`1h5m`, `-1h5m`或 `now-1h5m` 均代表 1小时5分钟之前，这里的 now 表示当前时间。
 
-## Graphite API <a href="#graphite-api-usage" id="graphite-api-usage"></a>
+### Graphite API <a href="#graphite-api-usage" id="graphite-api-usage"></a>
 
-VictoriaMetrics supports data ingestion in Graphite protocol - see [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-send-data-from-graphite-compatible-agents-such-as-statsd) for details. VictoriaMetrics supports the following Graphite querying APIs, which are needed for [Graphite datasource in Grafana](https://grafana.com/docs/grafana/latest/datasources/graphite/):
+VictoriaMetrics支持Graphite协议的数据摄入——详见[这些文档](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-send-data-from-graphite-compatible-agents-such-as-statsd)。VictoriaMetrics支持以下Graphite查询API，这些API对于Grafana中的[Graphite数据源](https://grafana.com/docs/grafana/latest/datasources/graphite/)是必需的：
 
-* Render API - see [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#graphite-render-api-usage).
-* Metrics API - see [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#graphite-metrics-api-usage).
-* Tags API - see [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#graphite-tags-api-usage).
+* Render API - 看 [这些文档](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#graphite-render-api-usage)。
+* Metrics API - 看 [这些文档](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#graphite-render-api-usage)。
+* Tags API - 看 [这些文档](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#graphite-render-api-usage)。
 
-All the Graphite handlers can be pre-pended with `/graphite` prefix. For example, both `/graphite/metrics/find` and `/metrics/find` should work.
+所有Graphite处理程序都可以使用`/graphite`前缀。例如，`/graphite/metrics/find`和`/metrics/find`都应该有效。
 
-VictoriaMetrics accepts optional query args: `extra_label=<label_name>=<label_value>` and `extra_filters[]=series_selector` query args for all the Graphite APIs. These args can be used for limiting the scope of time series visible to the given tenant. It is expected that the `extra_label` query arg is automatically set by auth proxy sitting in front of VictoriaMetrics. See [vmauth](https://docs.victoriametrics.com/vmauth.html) and [vmgateway](https://docs.victoriametrics.com/vmgateway.html) as examples of such proxies.
+VictoriaMetrics接受可选查询参数：`extra_label=<标签名>=<标签值>`和`extra_filters[]=series_selector`，这些参数适用于所有Graphite API。这些参数可用于限制给定租户可见的时间序列范围。预计`extra_label`查询参数将由位于VictoriaMetrics前方的身份验证代理自动设置。[vmauth](../xi-tong-zu-jian/vmauth.md)和[vmgateway](https://docs.victoriametrics.com/vmgateway.html)是此类代理的示例。
 
-[Contact us](mailto:sales@victoriametrics.com) if you need assistance with such a proxy.
+VictoriaMetrics支持`__graphite__`伪标签，用于在[MetricsQL](https://docs.victoriametrics.com/MetricsQL.html)中使用与Graphite兼容的过滤器过滤时间序列。详见[这些文档](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#selecting-graphite-metrics)。
 
-VictoriaMetrics supports `__graphite__` pseudo-label for filtering time series with Graphite-compatible filters in [MetricsQL](https://docs.victoriametrics.com/MetricsQL.html). See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#selecting-graphite-metrics).
+#### Graphite Render API 用法 <a href="#graphite-render-api-usage" id="graphite-render-api-usage"></a>
 
-### Graphite Render API usage <a href="#graphite-render-api-usage" id="graphite-render-api-usage"></a>
+VictoriaMetrics在`/render` url 上支持[Graphite Render API](https://graphite.readthedocs.io/en/stable/render\_api.html)子集，Grafana中的Graphite数据源会使用这一功能。在Grafana中配置[Graphite数据源](https://grafana.com/docs/grafana/latest/datasources/graphite/)时，必须将`Storage-Step` HTTP请求头设置为VictoriaMetrics中存储的Graphite数据点之间的步长。例如，`Storage-Step: 10s`表示VictoriaMetrics中存储的Graphite数据点之间相隔10秒。
 
-VictoriaMetrics supports [Graphite Render API](https://graphite.readthedocs.io/en/stable/render\_api.html) subset at `/render` endpoint, which is used by [Graphite datasource in Grafana](https://grafana.com/docs/grafana/latest/datasources/graphite/). When configuring Graphite datasource in Grafana, the `Storage-Step` http request header must be set to a step between Graphite data points stored in VictoriaMetrics. For example, `Storage-Step: 10s` would mean 10 seconds distance between Graphite datapoints stored in VictoriaMetrics.
+#### Graphite Metrics API 用法 <a href="#graphite-metrics-api-usage" id="graphite-metrics-api-usage"></a>
 
-### Graphite Metrics API usage <a href="#graphite-metrics-api-usage" id="graphite-metrics-api-usage"></a>
-
-VictoriaMetrics supports the following handlers from [Graphite Metrics API](https://graphite-api.readthedocs.io/en/latest/api.html#the-metrics-api):
+VictoriaMetrics 支持 [Graphite Metrics API](https://graphite-api.readthedocs.io/en/latest/api.html#the-metrics-api) 中的一下接口：
 
 * [/metrics/find](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-find)
 * [/metrics/expand](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-expand)
 * [/metrics/index.json](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-index-json)
 
-VictoriaMetrics accepts the following additional query args at `/metrics/find` and `/metrics/expand`:
+VictoriaMetrics `/metrics/find` 和 `/metrics/expand`接口上支持以下额外的参数:
 
-* `label` - for selecting arbitrary label values. By default, `label=__name__`, i.e. metric names are selected.
-* `delimiter` - for using different delimiters in metric name hierarchy. For example, `/metrics/find?delimiter=_&query=node_*` would return all the metric name prefixes that start with `node_`. By default `delimiter=.`.
+* `label` - 用于选择任意标签值。默认情况下，`label=__name__`，即选择度量名称。
+* `delimiter` - 用于在度量名称层次结构中使用不同的分隔符。例如，`/metrics/find?delimiter=`_`&query=node`_`*` 将返回所有以`node_`开头的度量名称前缀。默认情况下，`delimiter=.`。
 
-### Graphite Tags API usage <a href="#graphite-tags-api-usage" id="graphite-tags-api-usage"></a>
+#### Graphite Tags API usage <a href="#graphite-tags-api-usage" id="graphite-tags-api-usage"></a>
 
 VictoriaMetrics 支持下面这些 [Graphite Tags API](https://graphite.readthedocs.io/en/stable/tags.html):
 
@@ -106,63 +106,46 @@ VictoriaMetrics 支持下面这些 [Graphite Tags API](https://graphite.readthed
 
 ## 集群版
 
-The main differences between URL formats of cluster and [Single server](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html) versions are that cluster has separate components for read and ingestion path, and because of multi-tenancy support. Also in the cluster version the `/prometheus/api/v1` endpoint ingests `jsonl`, `csv`, `native` and `prometheus` data formats **not** only `prometheus` data. Check practical examples of VictoriaMetrics API [here](https://docs.victoriametrics.com/url-examples.html).
+集群版本和[单机版](../dan-ji-ban-ben.md)的API接口主要区别是数据的读取和写入是由独立组件完成的，而且也有了租户的支持。集群版本也支持`/prometheus/api/v1`来接收 `jsonl`, `csv`, `native` 和 `prometheus`数据格式，而不仅仅是`prometheus`数据格式。可以在[这里](https://docs.victoriametrics.com/url-examples.html)查看VictoriaMetrics的API的使用范例。
 
-* URLs for data ingestion: `http://<vminsert>:8480/insert/<accountID>/<suffix>`, where:
-  * `<accountID>` is an arbitrary 32-bit integer identifying namespace for data ingestion (aka tenant). It is possible to set it as `accountID:projectID`, where `projectID` is also arbitrary 32-bit integer. If `projectID` isn't set, then it equals to `0`. See [multitenancy docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy) for more details. The `<accountID>` can be set to `multitenant` string, e.g. `http://<vminsert>:8480/insert/multitenant/<suffix>`. Such urls accept data from multiple tenants specified via `vm_account_id` and `vm_project_id` labels. See [multitenancy via labels](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy-via-labels) for more details.
-  * `<suffix>` may have the following values:
-    * `prometheus` and `prometheus/api/v1/write` - for inserting data with [Prometheus remote write API](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#remote\_write).
-    * `prometheus/api/v1/import` - for importing data obtained via `api/v1/export` at `vmselect` (see below), JSON line format.
-    * `prometheus/api/v1/import/native` - for importing data obtained via `api/v1/export/native` on `vmselect` (see below).
-    * `prometheus/api/v1/import/csv` - for importing arbitrary CSV data. See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-import-csv-data) for details.
-    * `prometheus/api/v1/import/prometheus` - for importing data in [Prometheus text exposition format](https://github.com/prometheus/docs/blob/master/content/docs/instrumenting/exposition\_formats.md#text-based-format) and in [OpenMetrics format](https://github.com/OpenObservability/OpenMetrics/blob/master/specification/OpenMetrics.md). This endpoint also supports [Pushgateway protocol](https://github.com/prometheus/pushgateway#url). See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-import-data-in-prometheus-exposition-format) for details.
-    * `datadog/api/v1/series` - for inserting data with [DataDog submit metrics API](https://docs.datadoghq.com/api/latest/metrics/#submit-metrics). See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-send-data-from-datadog-agent) for details.
-    * `influx/write` and `influx/api/v2/write` - for inserting data with [InfluxDB line protocol](https://docs.influxdata.com/influxdb/v1.7/write\_protocols/line\_protocol\_tutorial/). See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#how-to-send-data-from-influxdb-compatible-agents-such-as-telegraf) for details.
-    * `opentsdb/api/put` - for accepting [OpenTSDB HTTP /api/put requests](http://opentsdb.net/docs/build/html/api\_http/put.html). This handler is disabled by default. It is exposed on a distinct TCP address set via `-opentsdbHTTPListenAddr` command-line flag. See [these docs](https://docs.victoriametrics.com/Single-server-VictoriaMetrics.html#sending-opentsdb-data-via-http-apiput-requests) for details.
-* URLs for [Prometheus querying API](https://prometheus.io/docs/prometheus/latest/querying/api/): `http://<vmselect>:8481/select/<accountID>/prometheus/<suffix>`, where:
-  * `<accountID>` is an arbitrary number identifying data namespace for the query (aka tenant)
-  * `<suffix>` may have the following values:
-    * `api/v1/query` - performs [PromQL instant query](https://docs.victoriametrics.com/keyConcepts.html#instant-query).
-    * `api/v1/query_range` - performs [PromQL range query](https://docs.victoriametrics.com/keyConcepts.html#range-query).
-    * `api/v1/series` - performs [series query](https://prometheus.io/docs/prometheus/latest/querying/api/#finding-series-by-label-matchers).
-    * `api/v1/labels` - returns a [list of label names](https://prometheus.io/docs/prometheus/latest/querying/api/#getting-label-names).
-    * `api/v1/label/<label_name>/values` - returns values for the given `<label_name>` according [to API](https://prometheus.io/docs/prometheus/latest/querying/api/#querying-label-values).
-    * `federate` - returns [federated metrics](https://prometheus.io/docs/prometheus/latest/federation/).
-    * `api/v1/export` - exports raw data in JSON line format. See [this article](https://medium.com/@valyala/analyzing-prometheus-data-with-external-tools-5f3e5e147639) for details.
-    * `api/v1/export/native` - exports raw data in native binary format. It may be imported into another VictoriaMetrics via `api/v1/import/native` (see above).
-    * `api/v1/export/csv` - exports data in CSV. It may be imported into another VictoriaMetrics via `api/v1/import/csv` (see above).
-    * `api/v1/series/count` - returns the total number of series.
-    * `api/v1/status/tsdb` - for time series stats. See [these docs](https://docs.victoriametrics.com/#tsdb-stats) for details.
-    * `api/v1/status/active_queries` - for currently executed active queries. Note that every `vmselect` maintains an independent list of active queries, which is returned in the response.
-    * `api/v1/status/top_queries` - for listing the most frequently executed queries and queries taking the most duration.
-    * `metric-relabel-debug` - for debugging [relabeling rules](https://docs.victoriametrics.com/relabeling.html).
-* URLs for [Graphite Metrics API](https://graphite-api.readthedocs.io/en/latest/api.html#the-metrics-api): `http://<vmselect>:8481/select/<accountID>/graphite/<suffix>`, where:
-  * `<accountID>` is an arbitrary number identifying data namespace for query (aka tenant)
-  * `<suffix>` may have the following values:
-    * `render` - implements Graphite Render API. See [these docs](https://graphite.readthedocs.io/en/stable/render\_api.html).
-    * `metrics/find` - searches Graphite metrics. See [these docs](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-find).
-    * `metrics/expand` - expands Graphite metrics. See [these docs](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-expand).
-    * `metrics/index.json` - returns all the metric names. See [these docs](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-index-json).
-    * `tags/tagSeries` - registers time series. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#adding-series-to-the-tagdb).
-    * `tags/tagMultiSeries` - register multiple time series. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#adding-series-to-the-tagdb).
-    * `tags` - returns tag names. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#exploring-tags).
-    * `tags/<tag_name>` - returns tag values for the given `<tag_name>`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#exploring-tags).
-    * `tags/findSeries` - returns series matching the given `expr`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#exploring-tags).
-    * `tags/autoComplete/tags` - returns tags matching the given `tagPrefix` and/or `expr`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#auto-complete-support).
-    * `tags/autoComplete/values` - returns tag values matching the given `valuePrefix` and/or `expr`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#auto-complete-support).
-    * `tags/delSeries` - deletes series matching the given `path`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#removing-series-from-the-tagdb).
-* URL with basic Web UI: `http://<vmselect>:8481/select/<accountID>/vmui/`.
-* URL for query stats across all tenants: `http://<vmselect>:8481/api/v1/status/top_queries`. It lists with the most frequently executed queries and queries taking the most duration.
-* URL for time series deletion: `http://<vmselect>:8481/delete/<accountID>/prometheus/api/v1/admin/tsdb/delete_series?match[]=<timeseries_selector_for_delete>`. Note that the `delete_series` handler should be used only in exceptional cases such as deletion of accidentally ingested incorrect time series. It shouldn't be used on a regular basis, since it carries non-zero overhead.
-* URL for listing [tenants](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multitenancy) with the ingested data on the given time range: `http://<vmselect>:8481/admin/tenants?start=...&end=...` . The `start` and `end` query args are optional. If they are missing, then all the tenants with at least one sample stored in VictoriaMetrics are returned.
-* URL for accessing [vmalerts](https://docs.victoriametrics.com/vmalert.html) UI: `http://<vmselect>:8481/select/<accountID>/prometheus/vmalert/`. This URL works only when `-vmalert.proxyURL` flag is set. See more about vmalert [here](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#vmalert).
-*   `vmstorage` nodes provide the following HTTP endpoints on `8482` port:
+### [Prometheus 查询 API](https://prometheus.io/docs/prometheus/latest/querying/api/)
 
-    * `/internal/force_merge` - initiate [forced compactions](https://docs.victoriametrics.com/#forced-merge) on the given `vmstorage` node.
-    * `/snapshot/create` - create [instant snapshot](https://medium.com/@valyala/how-victoriametrics-makes-instant-snapshots-for-multi-terabyte-time-series-data-e1f3fb0e0282), which can be used for backups in background. Snapshots are created in `<storageDataPath>/snapshots` folder, where `<storageDataPath>` is the corresponding command-line flag value.
-    * `/snapshot/list` - list available snapshots.
-    * `/snapshot/delete?snapshot=<id>` - delete the given snapshot.
-    * `/snapshot/delete_all` - delete all the snapshots.
+`http://<vmselect>:8481/select/<accountID>/prometheus/<suffix>`, 其中:
 
-    Snapshots may be created independently on each `vmstorage` node. There is no need in synchronizing snapshots' creation across `vmstorage` nodes.
+* `<accountID>` 是一个任意32位数字，用来标识查询的空间（即租户）。
+* `<suffix>` 可以是一下的内容：
+  * `api/v1/query` - 执行 [PromQL instant ](https://docs.victoriametrics.com/keyConcepts.html#instant-query).
+  * `api/v1/query_range` - 执行 [PromQL range 查询](https://docs.victoriametrics.com/keyConcepts.html#range-query)。
+  * `api/v1/series` - 执行 [series 查询](https://prometheus.io/docs/prometheus/latest/querying/api/#finding-series-by-label-matchers)。
+  * `api/v1/labels` - 返回 [label 名称列表](https://prometheus.io/docs/prometheus/latest/querying/api/#getting-label-names)。
+  * `api/v1/label/<label_name>/values` - 返回指定 `<label_name>` 的所有值，参考[这个 API](https://prometheus.io/docs/prometheus/latest/querying/api/#querying-label-values).
+  * `federate` - 返回 [federated metrics](https://prometheus.io/docs/prometheus/latest/federation/).
+  * `api/v1/export` - 导出 JSON line 格式的原始数据，更多信息看[这篇文章](https://medium.com/@valyala/analyzing-prometheus-data-with-external-tools-5f3e5e147639)。
+  * `api/v1/export/native` - 导出原生二进制格式的原始数据，该数据可以通过另一个接口`api/v1/import/native`导入到 VictoriaMetrics (见上文).
+  * `api/v1/export/csv` - 导出 CSV 格式原始数据。它可以使用另外一个接口 `api/v1/import/csv` 导入到 VictoriaMetrics（见上文）。
+  * `api/v1/series/count` - 返回 series 的总数。
+  * `api/v1/status/tsdb` - 返回时序数据的统计信息。更多详细信息见[这些文档](https://docs.victoriametrics.com/#tsdb-stats)。
+  * `api/v1/status/active_queries` - 返回当前活跃的查询请求。逐一每个 `vmselect` 实例都有独立的活跃查询列表。
+  * `api/v1/status/top_queries` - 返回执行频率最高以及查询耗时最长的查询列表。
+  * `metric-relabel-debug` - 用于对 [relabeling 规则](https://docs.victoriametrics.com/relabeling.html) Debug。
+
+### [Graphite Metrics API](https://graphite-api.readthedocs.io/en/latest/api.html#the-metrics-api)
+
+`http://<vmselect>:8481/select/<accountID>/graphite/<suffix>`, 其中:
+
+* `<accountID>`&#x20;
+* &#x20;是一个任意32位数字，用来标识查询的空间（即租户）。
+* `<suffix>` 可以是一下的内容：
+  * `render` - 实现 Graphite Render API. 看 [these docs](https://graphite.readthedocs.io/en/stable/render\_api.html).
+  * `metrics/find` - 搜索 Graphite metrics. See [these docs](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-find).
+  * `metrics/expand` - 扩展 Graphite metrics. See [these docs](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-expand).
+  * `metrics/index.json` - returns 所有的 names. See [these docs](https://graphite-api.readthedocs.io/en/latest/api.html#metrics-index-json).
+  * `tags/tagSeries` - 注册 time series. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#adding-series-to-the-tagdb).
+  * `tags/tagMultiSeries` - 批量注册 time series. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#adding-series-to-the-tagdb).
+  * `tags` - 返回 tag 名称列表. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#exploring-tags).
+  * `tags/<tag_name>` - 返回指定 `<tag_name>`的值列表 See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#exploring-tags).
+  * `tags/findSeries` - 返回匹配`expr`的 series，[these docs](https://graphite.readthedocs.io/en/stable/tags.html#exploring-tags).
+  * `tags/autoComplete/tags` - 返回匹配 `tagPrefix` 和/或 `expr`的tag名称列表。 See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#auto-complete-support).
+  * `tags/autoComplete/values` - 返回匹配 `valuePrefix` 和/或 `expr` tag值列表 See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#auto-complete-support).
+  * `tags/delSeries` - deletes series matching the given `path`. See [these docs](https://graphite.readthedocs.io/en/stable/tags.html#removing-series-from-the-tagdb).
 
