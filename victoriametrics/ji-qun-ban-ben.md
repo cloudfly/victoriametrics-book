@@ -370,23 +370,23 @@ vmselect 不会为返回原始数据点的 API 处理程序提供部分响应 - 
 
 给定保留期所需的存储空间（保留期通过 vmstorage 上的 `-retentionPeriod` 命令行标志设置）可以根据测试运行中的磁盘空间使用情况推断出来。例如，如果在生产工作负载上进行一天的测试运行后存储空间使用量为 10GB，那么在 `-retentionPeriod=100d`（100 天保留期）的情况下，至少需要 `10GB*100=1TB` 的磁盘空间。可以使用 VictoriaMetrics 集群的[官方 Grafana 大盘](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#monitoring)监控存储空间使用情况。
 
-It is recommended leaving the following amounts of spare resources:
+建议保留以下数量的备用资源：
 
-* 50% of free RAM across all the node types for reducing the probability of OOM (out of memory) crashes and slowdowns during temporary spikes in workload.
-* 50% of spare CPU across all the node types for reducing the probability of slowdowns during temporary spikes in workload.
-* At least 20% of free storage space at the directory pointed by `-storageDataPath` command-line flag at `vmstorage` nodes. See also `-storage.minFreeDiskSpaceBytes` command-line flag [description for vmstorage](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#list-of-command-line-flags-for-vmstorage).
+* 所有节点类型均有 50% 的可用 RAM，用于降低工作负载暂时激增期间出现 OOM（内存不足）崩溃和速度减速的概率。
+* 所有节点类型均有 50% 的备用 CPU，以降低工作负载临时激增期间出现速度变慢的可能性。
+* vmstorage 节点的 `-storageDataPath` 命令行参数指向的目录中至少有 20% 的可用存储空间。另请参阅 vmstorage 的 `-storage.minFreeDiskSpaceBytes` 命令行[参数描述](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#list-of-command-line-flags-for-vmstorage)。
 
-Some capacity planning tips for VictoriaMetrics cluster:
+VictoriaMetrics 集群的一些容量规划技巧：
 
-* The [replication](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#replication-and-data-safety) increases the amounts of needed resources for the cluster by up to `N` times where `N` is replication factor. This is because `vminsert` stores `N` copies of every ingested sample on distinct `vmstorage` nodes. These copies are de-duplicated by `vmselect` during querying. The most cost-efficient and performant solution for data durability is to rely on replicated durable persistent disks such as [Google Compute persistent disks](https://cloud.google.com/compute/docs/disks#pdspecs) instead of using the [replication at VictoriaMetrics level](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#replication-and-data-safety).
-* It is recommended to run a cluster with big number of small `vmstorage` nodes instead of a cluster with small number of big `vmstorage` nodes. This increases chances that the cluster remains available and stable when some of `vmstorage` nodes are temporarily unavailable during maintenance events such as upgrades, configuration changes or migrations. For example, when a cluster contains 10 `vmstorage` nodes and a single node becomes temporarily unavailable, then the workload on the remaining 9 nodes increases by `1/9=11%`. When a cluster contains 3 `vmstorage` nodes and a single node becomes temporarily unavailable, then the workload on the remaining 2 nodes increases by `1/2=50%`. The remaining `vmstorage` nodes may have no enough free capacity for handling the increased workload. In this case the cluster may become overloaded, which may result to decreased availability and stability.
-* Cluster capacity for [active time series](https://docs.victoriametrics.com/FAQ.html#what-is-an-active-time-series) can be increased by increasing RAM and CPU resources per each `vmstorage` node or by adding new `vmstorage` nodes.
-* Query latency can be reduced by increasing CPU resources per each `vmselect` node, since each incoming query is processed by a single `vmselect` node. Performance for heavy queries scales with the number of available CPU cores at `vmselect` node, since `vmselect` processes time series referred by the query on all the available CPU cores.
-* If the cluster needs to process incoming queries at a high rate, then its capacity can be increased by adding more `vmselect` nodes, so incoming queries could be spread among bigger number of `vmselect` nodes.
-* By default `vminsert` compresses the data it sends to `vmstorage` in order to reduce network bandwidth usage. The compression takes additional CPU resources at `vminsert`. If `vminsert` nodes have limited CPU, then the compression can be disabled by passing `-rpc.disableCompression` command-line flag at `vminsert` nodes.
-* By default `vmstorage` compresses the data it sends to `vmselect` during queries in order to reduce network bandwidth usage. The compression takes additional CPU resources at `vmstorage`. If `vmstorage` nodes have limited CPU, then the compression can be disabled by passing `-rpc.disableCompression` command-line flag at `vmstorage` nodes.
+* [多副本](ji-qun-ban-ben.md#replication-and-data-safety)可将集群所需的资源量增加多达 `N` 倍，其中 `N` 是副本数。这是因为 `vminsert` 将每个摄取样本的 N 个副本存储在不同的 `vmstorage` 节点上。查询期间，`vmselect` 会对这些副本进行重复数据删除。数据持久性最具成本和性能的解决方案是依赖高可用磁盘（例如 [Google Compute 持久磁盘](https://cloud.google.com/compute/docs/disks#pdspecs)），而不是使用 [VictoriaMetrics 级别的复制机制](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#replication-and-data-safety)。
+* 建议构建一个由众多小型 vmstorage 节点组成的集群，而非少数大型 vmstorage 节点。这样，在进行维护操作（如升级、配置更改或迁移）时，若部分 vmstorage 节点临时离线，集群更有可能保持高可用性和稳定性。举例来说，若一个集群拥有10个vmstorage节点，其中一个节点临时不可用，其余9个节点的负载将增加约11%（即1/9）。而如果集群仅由3个vmstorage节点构成，单个节点离线时，其余两个节点的负载将激增50%（即1/2）。在这种情况下，剩余节点可能无法承受额外的工作负载，导致集群过载，进而影响可用性和稳定性。
+* 增加每个vmstorage节点的RAM和CPU资源，或者添加新的vmstorage节点，可以提高集群对[活跃时间序列](https://docs.victoriametrics.com/FAQ.html#what-is-an-active-time-series)的处理能力。
+* &#x20;提高每个vmselect节点的CPU资源可以降低查询延迟，因为每个传入查询都由单个vmselect节点处理。vmselect节点的可用CPU核心数越多，其处理查询中涉及的时间序列的性能就越好。
+* 如果集群需要高速处理传入查询，可以通过添加更多vmselect节点来提高其处理能力，这样传入查询就可以分散到更多的vmselect节点上。
+* 默认情况下，vminsert会压缩发送给vmstorage的数据，以减少网络带宽使用。压缩过程会消耗vminsert节点额外的CPU资源。如果vminsert节点的CPU资源有限，可以通过在vminsert节点上传递`-rpc.disableCompression`命令行标志来禁用压缩。
+* 默认情况下，vmstorage在查询期间会压缩发送给vmselect的数据，以减少网络带宽使用。压缩过程会消耗vmstorage节点额外的CPU资源。如果vmstorage节点的CPU资源有限，可以通过在vmstorage节点上传递`-rpc.disableCompression`命令行参数来禁用压缩。
 
-See also [resource usage limits docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#resource-usage-limits).
+也可以参阅[资源使用限制文档](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#resource-usage-limits)。
 
 ### 资源使用限制 <a href="#resource-usage-limits" id="resource-usage-limits"></a>
 
@@ -413,13 +413,19 @@ See also [capacity planning docs](https://docs.victoriametrics.com/Cluster-Victo
 
 ### 高可用 <a href="#high-availability" id="high-availability"></a>
 
-The database is considered highly available if it continues accepting new data and processing incoming queries when some of its components are temporarily unavailable. VictoriaMetrics cluster is highly available according to this definition - see [cluster availability docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#cluster-availability).
+如果数据库在部分组件暂时不可用时仍能接收新数据并处理传入查询，则被认为是高可用的。VictoriaMetrics集群符合这一定义，请参阅[集群可用性文档](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#cluster-availability)。
 
-It is recommended to run all the components for a single cluster in the same subnetwork with high bandwidth, low latency and low error rates. This improves cluster performance and availability. It isn't recommended spreading components for a single cluster across multiple availability zones, since cross-AZ network usually has lower bandwidth, higher latency and higher error rates comparing the network inside a single AZ.
+建议在具有高带宽、低延迟和低错误率的同一子网络中运行单个集群的所有组件，这可以提高集群的性能和可用性。不建议将单个集群的组件分布在多个可用区（AZ）中，因为跨AZ网络通常带宽较低、延迟较高、错误率也较高，相比之下，单个AZ内的网络表现更好。
 
-If you need multi-AZ setup, then it is recommended running independent clusters in each AZ and setting up [vmagent](https://docs.victoriametrics.com/vmagent.html) in front of these clusters, so it could replicate incoming data into all the cluster - see [these docs](https://docs.victoriametrics.com/vmagent.html#multitenancy) for details. Then an additional `vmselect` nodes can be configured for reading the data from multiple clusters according to [these docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multi-level-cluster-setup).
+如果你需要跨多个AZ的设置，建议在每个AZ中运行独立的集群，并在这些集群前设置[vmagent](https://docs.victoriametrics.com/vmagent.html)，以便它能将传入数据复制到所有集群中，详情请参阅[相关文档](https://docs.victoriametrics.com/vmagent.html#multitenancy)。此外，可以配置额外的vmselect节点，以便根据[这些文档](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#multi-level-cluster-setup)从多个集群中读取数据。
 
 ### 多层联邦部署 <a href="#multi-level-cluster-setup" id="multi-level-cluster-setup"></a>
+
+当vmselect节点运行时带有-clusternativeListenAddr命令行标志，它们可以被其他vmselect节点查询。例如，如果vmselect以-clusternativeListenAddr=:8401启动，那么它可以在TCP端口8401上接受来自其他vmselect节点的查询，就像vmstorage节点一样。这允许vmselect节点进行链式连接，并构建多层集群拓扑。例如，顶层vmselect节点可以查询不同可用区（AZ）中的第二层vmselect节点，而第二层vmselect节点可以查询本地AZ中的vmstorage节点。
+
+当vminsert节点运行时带有-clusternativeListenAddr命令行标志，它们可以接受来自其他vminsert节点的数据。例如，如果vminsert以-clusternativeListenAddr=:8400启动，那么它可以在TCP端口8400上接受来自其他vminsert节点的数据，就像vmstorage节点一样。这允许vminsert节点进行链式连接，并构建多层集群拓扑。例如，顶层vminsert节点可以将数据复制到位于不同可用区（AZ）的第二层vminsert节点中，而第二层vminsert节点可以将数据分散到本地AZ中的vmstorage节点。
+
+由于同步复制和数据分片，vminsert节点的多层集群设置存在以下缺点：
 
 `vmselect` nodes can be queried by other `vmselect` nodes if they run with `-clusternativeListenAddr` command-line flag. For example, if `vmselect` is started with `-clusternativeListenAddr=:8401`, then it can accept queries from another `vmselect` nodes at TCP port 8401 in the same way as `vmstorage` nodes do. This allows chaining `vmselect` nodes and building multi-level cluster topologies. For example, the top-level `vmselect` node can query second-level `vmselect` nodes in different availability zones (AZ), while the second-level `vmselect` nodes can query `vmstorage` nodes in local AZ.
 
@@ -427,62 +433,62 @@ If you need multi-AZ setup, then it is recommended running independent clusters 
 
 The multi-level cluster setup for `vminsert` nodes has the following shortcomings because of synchronous replication and data sharding:
 
-* Data ingestion speed is limited by the slowest link to AZ.
-* `vminsert` nodes at top level re-route incoming data to the remaining AZs when some AZs are temporarily unavailable. This results in data gaps at AZs which were temporarily unavailable.
+* 数据写入速度受限于连接到AZ的最慢链路。
+* 当某些可用区（AZ）暂时不可用时，顶层的`vminsert`节点会将传入数据重新路由到剩余的AZ中。这会导致在暂时不可用的AZ中出现数据缺口。
 
-These issues are addressed by [vmagent](https://docs.victoriametrics.com/vmagent.html) when it runs in [multitenancy mode](https://docs.victoriametrics.com/vmagent.html#multitenancy). `vmagent` buffers data, which must be sent to a particular AZ, when this AZ is temporarily unavailable. The buffer is stored on disk. The buffered data is sent to AZ as soon as it becomes available.
+当[vmagent](https://docs.victoriametrics.com/vmagent.html)以[多租户模式](https://docs.victoriametrics.com/vmagent.html#multitenancy)运行时，这些问题得到了解决。当特定AZ暂时不可用时，vmagent会缓冲必须发送到该AZ的数据。缓冲区存储在磁盘上。一旦AZ变得可用，缓冲的数据就会被发送到AZ。
 
 ### Helm <a href="#helm" id="helm"></a>
 
-Helm chart simplifies managing cluster version of VictoriaMetrics in Kubernetes. It is available in the [helm-charts](https://github.com/VictoriaMetrics/helm-charts) repository.
+Helm图表简化了在Kubernetes中管理VictoriaMetrics集群版本的过程。它可在[helm-charts](https://github.com/VictoriaMetrics/helm-charts)仓库中获得。
 
 ### Kubernetes operator <a href="#kubernetes-operator" id="kubernetes-operator"></a>
 
-[K8s operator](https://github.com/VictoriaMetrics/operator) simplifies managing VictoriaMetrics components in Kubernetes.
+[K8s operator](https://github.com/VictoriaMetrics/operator) 简化了在Kubernetes中管理VictoriaMetrics组件的过程。
 
 ### 副本和数据安全 <a href="#replication-and-data-safety" id="replication-and-data-safety"></a>
 
-By default, VictoriaMetrics offloads replication to the underlying storage pointed by `-storageDataPath` such as [Google compute persistent disk](https://cloud.google.com/compute/docs/disks#pdspecs), which guarantees data durability. VictoriaMetrics supports application-level replication if replicated durable persistent disks cannot be used for some reason.
+默认情况下，VictoriaMetrics将复制工作卸载到由-storageDataPath指定的底层存储上，如[Google计算引擎的持久磁盘](https://cloud.google.com/compute/docs/disks#pdspecs)，这保证了数据的持久性。如果出于某种原因无法使用复制的持久磁盘，VictoriaMetrics支持应用级别的复制。
 
-The replication can be enabled by passing `-replicationFactor=N` command-line flag to `vminsert`. This instructs `vminsert` to store `N` copies for every ingested sample on `N` distinct `vmstorage` nodes. This guarantees that all the stored data remains available for querying if up to `N-1` `vmstorage` nodes are unavailable.
+通过向vminsert传递`-replicationFactor=N`命令行标志可以启用复制，这指示vminsert在N个不同的vmstorage节点上存储每个摄入样本的N份副本。这保证了即使有最多N-1个vmstorage节点不可用，所有存储的数据仍然可用于查询。
 
-Passing `-replicationFactor=N` command-line flag to `vmselect` instructs it to not mark responses as `partial` if less than `-replicationFactor` vmstorage nodes are unavailable during the query. See [cluster availability docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#cluster-availability) for details.
+向vmselect传递-replicationFactor=N命令行标志指示它不在查询期间如果少于-replicationFactor个vmstorage节点不可用时将响应标记为部分响应。详情请参阅[集群可用性文档](ji-qun-ban-ben.md#high-availability)。
 
-The cluster must contain at least `2*N-1` `vmstorage` nodes, where `N` is replication factor, in order to maintain the given replication factor for newly ingested data when `N-1` of storage nodes are unavailable.
+为了在`N-1`个存储节点不可用时保持对新摄入数据的给定复制因子，集群必须包含至少`2*N-1`个`vmstorage`节点，其中N是复制因子。
 
-VictoriaMetrics stores timestamps with millisecond precision, so `-dedup.minScrapeInterval=1ms` command-line flag must be passed to `vmselect` nodes when the replication is enabled, so they could de-duplicate replicated samples obtained from distinct `vmstorage` nodes during querying. If duplicate data is pushed to VictoriaMetrics from identically configured [vmagent](https://docs.victoriametrics.com/vmagent.html) instances or Prometheus instances, then the `-dedup.minScrapeInterval` must be set to `scrape_interval` from scrape configs according to [deduplication docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#deduplication).
+VictoriaMetrics以毫秒精度存储时间戳，因此在启用复制时必须向vmselect节点传递`-dedup.minScrapeInterval=1ms`命令行参数，这样它们在查询期间可以从不同的vmstorage节点上去重复制的样本。如果从配置相同的[`vmagent`](xi-tong-zu-jian/vmagent.md)实例或Prometheus实例向VictoriaMetrics推送了重复数据，则根据[去重文档](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#deduplication)，`-dedup.minScrapeInterval`必须设置为抓取配置中的`scrape_interval`。
 
-Note that [replication doesn't save from disaster](https://medium.com/@valyala/speeding-up-backups-for-big-time-series-databases-533c1a927883), so it is recommended performing regular backups. See [these docs](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#backups) for details.
+注意，[复制不能防止灾难](https://medium.com/@valyala/speeding-up-backups-for-big-time-series-databases-533c1a927883)，因此建议定期进行备份。详情请参阅[这些文档](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#backups)。
 
-Note that the replication increases resource usage - CPU, RAM, disk space, network bandwidth - by up to `-replicationFactor=N` times, because `vminsert` stores `N` copies of incoming data to distinct `vmstorage` nodes and `vmselect` needs to de-duplicate the replicated data obtained from `vmstorage` nodes during querying. So it is more cost-effective to offload the replication to underlying replicated durable storage pointed by `-storageDataPath` such as [Google Compute Engine persistent disk](https://cloud.google.com/compute/docs/disks/#pdspecs), which is protected from data loss and data corruption. It also provides consistently high performance and [may be resized](https://cloud.google.com/compute/docs/disks/add-persistent-disk) without downtime. HDD-based persistent disks should be enough for the majority of use cases. It is recommended using durable replicated persistent volumes in Kubernetes.
+注意，复制会增加资源使用——CPU、RAM、磁盘空间、网络带宽——最多可达`-replicationFactor=N`倍，因为vminsert将N份摄入数据存储到不同的vmstorage节点上，并且vmselect在查询期间需要去重从vmstorage节点获得的复制数据。因此，将复制工作卸载到由`-storageDataPath`指定的底层复制的持久存储上，如[Google计算引擎的持久磁盘](https://cloud.google.com/compute/docs/disks/#pdspecs)，这可以防止数据丢失和数据损坏，更加成本效益。它还提供持续的高性能，并且可以在不停机的情况下[调整大小](https://cloud.google.com/compute/docs/disks/add-persistent-disk)。基于HDD的持久磁盘应该足以满足大多数用例。建议在Kubernetes中使用耐用的复制持久卷。
 
 ### 去重机制 <a href="#deduplication" id="deduplication"></a>
 
-Cluster version of VictoriaMetrics supports data deduplication in the same way as single-node version do. See [these docs](https://docs.victoriametrics.com/#deduplication) for details. The only difference is that the same `-dedup.minScrapeInterval` command-line flag value must be passed to both `vmselect` and `vmstorage` nodes because of the following aspects:
+VictoriaMetrics的集群版本支持数据去重，与单节点版本的方式相同。详情请参阅[这些文档](https://docs.victoriametrics.com/#deduplication)。唯一的区别是，由于以下方面，相同的-dedup.minScrapeInterval命令行标志值必须同时传递给vmselect和vmstorage节点：
 
-By default, `vminsert` tries to route all the samples for a single time series to a single `vmstorage` node. But samples for a single time series can be spread among multiple `vmstorage` nodes under certain conditions:
+默认情况下，vminsert尝试将单个时间序列的所有样本路由到单个vmstorage节点。但在某些条件下，单个时间序列的样本可能会分布在多个vmstorage节点上：
 
-* when adding/removing `vmstorage` nodes. Then new samples for a part of time series will be routed to another `vmstorage` nodes;
-* when `vmstorage` nodes are temporarily unavailable (for instance, during their restart). Then new samples are re-routed to the remaining available `vmstorage` nodes;
-* when `vmstorage` node has no enough capacity for processing incoming data stream. Then `vminsert` re-routes new samples to other `vmstorage` nodes.
+* 当添加/移除vmstorage节点时。此时，部分时间序列的新样本将被路由到其他vmstorage节点；
+* 当vmstorage节点暂时不可用（例如，在它们重启期间）。此时，新样本将被重新路由到剩余的可用vmstorage节点；
+* 当vmstorage节点没有足够的能力处理传入的数据流时。此时，vminsert将新样本重新路由到其他vmstorage节点。
 
 ### 备份 <a href="#backups" id="backups"></a>
 
-It is recommended performing periodical backups from [instant snapshots](https://medium.com/@valyala/how-victoriametrics-makes-instant-snapshots-for-multi-terabyte-time-series-data-e1f3fb0e0282) for protecting from user errors such as accidental data deletion.
+建议定期从[即时快照](https://medium.com/@valyala/how-victoriametrics-makes-instant-snapshots-for-multi-terabyte-time-series-data-e1f3fb0e0282)进行备份，以防止用户错误，如意外删除数据。
 
-The following steps must be performed for each `vmstorage` node for creating a backup:
+创建备份时，必须对每个vmstorage节点执行以下步骤：
 
-1. Create an instant snapshot by navigating to `/snapshot/create` HTTP handler. It will create snapshot and return its name.
-2. Archive the created snapshot from `<-storageDataPath>/snapshots/<snapshot_name>` folder using [vmbackup](https://docs.victoriametrics.com/vmbackup.html). The archival process doesn't interfere with `vmstorage` work, so it may be performed at any suitable time.
-3. Delete unused snapshots via `/snapshot/delete?snapshot=<snapshot_name>` or `/snapshot/delete_all` in order to free up occupied storage space.
+* 通过导航到/snapshot/create HTTP处理器创建即时快照。它将创建快照并返回其名称。
+* 使用[vmbackup](xi-tong-zu-jian/vmbackup.md)从`<storageDataPath>/snapshots/<snapshot_name>`文件夹归档创建的快照。归档过程不会干扰vmstorage的工作，因此可以在任何合适的时间进行。
+* 通过`/snapshot/delete?snapshot=<snapshot_name>`或`/snapshot/delete_all`删除未使用的快照，以释放占用的存储空间。
 
-There is no need in synchronizing backups among all the `vmstorage` nodes.
+无需在所有vmstorage节点之间同步备份。
 
-Restoring from backup:
+从备份中恢复数据：
 
-1. Stop `vmstorage` node with `kill -INT`.
-2. Restore data from backup using [vmrestore](https://docs.victoriametrics.com/vmrestore.html) into `-storageDataPath` directory.
-3. Start `vmstorage` node.
+1. `kill -INT`命令关停 `vmstorage`。
+2. 使用 [vmrestore](https://docs.victoriametrics.com/vmrestore.html) 将备份数据恢复到 `-storageDataPath` 指定的目录。
+3. 启动 `vmstorage` 节点.
 
 ### 保存时间过滤器 <a href="#retention-filters" id="retention-filters"></a>
 
@@ -496,30 +502,24 @@ VictoriaMetrics 企业版支持通过 label filter 来配置多种数据保留�
 
 更多关于保存时间过滤器的详细内容，可以阅读[这些文档](https://docs.victoriametrics.com/#retention-filters)。
 
-### 降采样 <a href="#downsampling" id="downsampling"></a>
-
-Downsampling is available in [enterprise version of VictoriaMetrics](https://docs.victoriametrics.com/enterprise.html). It is configured with `-downsampling.period` command-line flag. The same flag value must be passed to both `vmstorage` and `vmselect` nodes. See [these docs](https://docs.victoriametrics.com/#downsampling) for details.
-
-Enterprise binaries can be downloaded and evaluated for free from [the releases page](https://github.com/VictoriaMetrics/VictoriaMetrics/releases).
-
 ### 性能分析 <a href="#profiling" id="profiling"></a>
 
 All the cluster components provide the following handlers for [profiling](https://blog.golang.org/profiling-go-programs):
 
-* `http://vminsert:8480/debug/pprof/heap` for memory profile and `http://vminsert:8480/debug/pprof/profile` for CPU profile
-* `http://vmselect:8481/debug/pprof/heap` for memory profile and `http://vmselect:8481/debug/pprof/profile` for CPU profile
-* `http://vmstorage:8482/debug/pprof/heap` for memory profile and `http://vmstorage:8482/debug/pprof/profile` for CPU profile
+* `http://vminsert:8480/debug/pprof/heap` 内存剖析和`http://vminsert:8480/debug/pprof/profile`  CPU 剖析
+* `http://vmselect:8481/debug/pprof/heap` 内存剖析和`http://vmselect:8481/debug/pprof/profile`  CPU 剖析
+* `http://vmstorage:8482/debug/pprof/heap` 内存剖析和`http://vmstorage:8482/debug/pprof/profile` CPU 剖析
 
-Example command for collecting cpu profile from `vmstorage` (replace `0.0.0.0` with `vmstorage` hostname if needed):
+从vmstorage收集CPU剖析示例命令（使用 `vmstorage` 的 hostname 替换掉  `0.0.0.0）`：
 
 ```
 Copycurl http://0.0.0.0:8482/debug/pprof/profile > cpu.pprof
 ```
 
-Example command for collecting memory profile from `vminsert` (replace `0.0.0.0` with `vminsert` hostname if needed):
+从 vminsert 收集内存剖析实例命令（使用 `vminsert` 的 hostname 替换掉  `0.0.0.0）`：
 
 ```
 Copycurl http://0.0.0.0:8480/debug/pprof/heap > mem.pprof
 ```
 
-It is safe sharing the collected profiles from security point of view, since they do not contain sensitive information.
+从安全角度来看，共享收集的剖析是安全的，因为它们不包含敏感信息。
