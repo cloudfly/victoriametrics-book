@@ -16,7 +16,7 @@ VictoriaMetrics集群支持多个隔离的租户（即命名空间）。租户�
 
 关于VictoriaMetrics中租户的一些事实：
 
-每个accountID和projectID均由一个任意的32位整数标识，范围为\[0..2^32)。如果projectID缺失，则自动分配为0。预期其他关于租户的信息，如身份验证令牌、租户名称、限制、会计等，存储在一个独立的关系数据库中。该数据库必须由位于VictoriaMetrics集群前端的独立服务进行管理，例如[vmauth](https://docs.victoriametrics.com/vmauth.html)或[vmgateway](https://docs.victoriametrics.com/vmgateway.html)。如果您需要此类服务的协助，请联系我们。
+每个accountID和projectID均由一个任意的32位整数标识，范围为`[0..2^32)`。如果projectID缺失，则自动分配为0。预期其他关于租户的信息，如身份验证令牌、租户名称、限制、会计等，存储在一个独立的关系数据库中。该数据库必须由位于VictoriaMetrics集群前端的独立服务进行管理，例如[vmauth](https://docs.victoriametrics.com/vmauth.html)或[vmgateway](https://docs.victoriametrics.com/vmgateway.html)。如果您需要此类服务的协助，请联系我们。
 
 当第一个数据点被写入给定的租户时，租户会被自动创建。
 
@@ -390,11 +390,11 @@ VictoriaMetrics 集群的一些容量规划技巧：
 
 ### 资源使用限制 <a href="#resource-usage-limits" id="resource-usage-limits"></a>
 
-By default, cluster components of VictoriaMetrics are tuned for an optimal resource usage under typical workloads. Some workloads may need fine-grained resource usage limits. In these cases the following command-line flags may be useful:
+默认情况下，VictoriaMetrics 的集群组件会根据典型工作负载的最佳资源使用情况进行调整。某些工作负载可能需要细粒度的资源使用限制。在这种情况下，以下命令行参数可能会有用：
 
-* `-memory.allowedPercent` and `-memory.allowedBytes` limit the amounts of memory, which may be used for various internal caches at all the cluster components of VictoriaMetrics - `vminsert`, `vmselect` and `vmstorage`. Note that VictoriaMetrics components may use more memory, since these flags don't limit additional memory, which may be needed on a per-query basis.
-* `-search.maxMemoryPerQuery` limits the amounts of memory, which can be used for processing a single query at `vmselect` node. Queries, which need more memory, are rejected. Heavy queries, which select big number of time series, may exceed the per-query memory limit by a small percent. The total memory limit for concurrently executed queries can be estimated as `-search.maxMemoryPerQuery` multiplied by `-search.maxConcurrentRequests`.
-* `-search.maxUniqueTimeseries` at `vmselect` component limits the number of unique time series a single query can find and process. `vmselect` passes the limit to `vmstorage` component, which keeps in memory some metainformation about the time series located by each query and spends some CPU time for processing the found time series. This means that the maximum memory usage and CPU usage a single query can use at `vmstorage` is proportional to `-search.maxUniqueTimeseries`.
+* `-memory.allowedPercent` 和 `-memory.allowedBytes` 限制所有的 VictoriaMetrics 集群组件里的各种内部 cache 会使用的内存用量 —— `vminsert`, `vmselect` 和 `vmstorage`。请注意，VictoriaMetrics 组件可能会占用更多内存，因为这些参数并不限制其他地方消耗的内存，比如可能是查询请求消耗的。
+* `-search.maxMemoryPerQuery` 限制 vmselect 实例执行一次查询请求所使用的内存总量。申请超限的内存会被拒绝。查询大量时间序列的重查询，可能会超查询内存限制一点点。并发查询的内存总限制差不多等于`-search.maxMemoryPerQuery` 和 `-search.maxConcurrentRequests` 的乘机。
+* `vmselect`组件的`-search.maxUniqueTimeseries` 参数限制了单词查询能够查询并计算多少个独立时间序列。`vmselect` 会将该限制参数传递给 `vmstorage` 组件，which keeps in memory some metainformation about the time series located by each query and spends some CPU time for processing the found time series. This means that the maximum memory usage and CPU usage a single query can use at `vmstorage` is proportional to `-search.maxUniqueTimeseries`.
 * `-search.maxQueryDuration` at `vmselect` limits the duration of a single query. If the query takes longer than the given duration, then it is canceled. This allows saving CPU and RAM at `vmselect` and `vmstorage` when executing unexpectedly heavy queries.
 * `-search.maxConcurrentRequests` at `vmselect` and `vmstorage` limits the number of concurrent requests a single `vmselect` / `vmstorage` node can process. Bigger number of concurrent requests usually require bigger amounts of memory at both `vmselect` and `vmstorage`. For example, if a single query needs 100 MiB of additional memory during its execution, then 100 concurrent queries may need `100 * 100 MiB = 10 GiB` of additional memory. So it is better to limit the number of concurrent queries, while suspending additional incoming queries if the concurrency limit is reached. `vmselect` and `vmstorage` provides `-search.maxQueueDuration` command-line flag for limiting the maximum wait time for suspended queries. See also `-search.maxMemoryPerQuery` command-line flag at `vmselect`.
 * `-search.maxQueueDuration` at `vmselect` and `vmstorage` limits the maximum duration queries may wait for execution when `-search.maxConcurrentRequests` concurrent queries are executed.
@@ -421,17 +421,11 @@ See also [capacity planning docs](https://docs.victoriametrics.com/Cluster-Victo
 
 ### 多层联邦部署 <a href="#multi-level-cluster-setup" id="multi-level-cluster-setup"></a>
 
-当vmselect节点运行时带有-clusternativeListenAddr命令行标志，它们可以被其他vmselect节点查询。例如，如果vmselect以-clusternativeListenAddr=:8401启动，那么它可以在TCP端口8401上接受来自其他vmselect节点的查询，就像vmstorage节点一样。这允许vmselect节点进行链式连接，并构建多层集群拓扑。例如，顶层vmselect节点可以查询不同可用区（AZ）中的第二层vmselect节点，而第二层vmselect节点可以查询本地AZ中的vmstorage节点。
+当vmselect节点运行时带有`-clusternativeListenAddr`命令行标志，它们可以被其他vmselect节点查询。例如，如果vmselect以`-clusternativeListenAddr=:8401`启动，那么它可以在TCP端口8401上接受来自其他vmselect节点的查询，就像vmstorage节点一样。这允许vmselect节点进行链式连接，并构建多层集群拓扑。例如，顶层vmselect节点可以查询不同可用区（AZ）中的第二层vmselect节点，而第二层vmselect节点可以查询本地AZ中的vmstorage节点。
 
-当vminsert节点运行时带有-clusternativeListenAddr命令行标志，它们可以接受来自其他vminsert节点的数据。例如，如果vminsert以-clusternativeListenAddr=:8400启动，那么它可以在TCP端口8400上接受来自其他vminsert节点的数据，就像vmstorage节点一样。这允许vminsert节点进行链式连接，并构建多层集群拓扑。例如，顶层vminsert节点可以将数据复制到位于不同可用区（AZ）的第二层vminsert节点中，而第二层vminsert节点可以将数据分散到本地AZ中的vmstorage节点。
+当vminsert节点运行时带有`-clusternativeListenAddr`命令行标志，它们可以接受来自其他vminsert节点的数据。例如，如果vminsert以`-clusternativeListenAddr=:8400`启动，那么它可以在TCP端口8400上接受来自其他vminsert节点的数据，就像vmstorage节点一样。这允许vminsert节点进行链式连接，并构建多层集群拓扑。例如，顶层vminsert节点可以将数据复制到位于不同可用区（AZ）的第二层vminsert节点中，而第二层vminsert节点可以将数据分散到本地AZ中的vmstorage节点。
 
 由于同步复制和数据分片，vminsert节点的多层集群设置存在以下缺点：
-
-`vmselect` nodes can be queried by other `vmselect` nodes if they run with `-clusternativeListenAddr` command-line flag. For example, if `vmselect` is started with `-clusternativeListenAddr=:8401`, then it can accept queries from another `vmselect` nodes at TCP port 8401 in the same way as `vmstorage` nodes do. This allows chaining `vmselect` nodes and building multi-level cluster topologies. For example, the top-level `vmselect` node can query second-level `vmselect` nodes in different availability zones (AZ), while the second-level `vmselect` nodes can query `vmstorage` nodes in local AZ.
-
-`vminsert` nodes can accept data from another `vminsert` nodes if they run with `-clusternativeListenAddr` command-line flag. For example, if `vminsert` is started with `-clusternativeListenAddr=:8400`, then it can accept data from another `vminsert` nodes at TCP port 8400 in the same way as `vmstorage` nodes do. This allows chaining `vminsert` nodes and building multi-level cluster topologies. For example, the top-level `vminsert` node can replicate data among the second level of `vminsert` nodes located in distinct availability zones (AZ), while the second-level `vminsert` nodes can spread the data among `vmstorage` nodes in local AZ.
-
-The multi-level cluster setup for `vminsert` nodes has the following shortcomings because of synchronous replication and data sharding:
 
 * 数据写入速度受限于连接到AZ的最慢链路。
 * 当某些可用区（AZ）暂时不可用时，顶层的`vminsert`节点会将传入数据重新路由到剩余的AZ中。这会导致在暂时不可用的AZ中出现数据缺口。
@@ -452,7 +446,7 @@ Helm图表简化了在Kubernetes中管理VictoriaMetrics集群版本的过程。
 
 通过向vminsert传递`-replicationFactor=N`命令行标志可以启用复制，这指示vminsert在N个不同的vmstorage节点上存储每个摄入样本的N份副本。这保证了即使有最多N-1个vmstorage节点不可用，所有存储的数据仍然可用于查询。
 
-向vmselect传递-replicationFactor=N命令行标志指示它不在查询期间如果少于-replicationFactor个vmstorage节点不可用时将响应标记为部分响应。详情请参阅[集群可用性文档](ji-qun-ban-ben.md#high-availability)。
+向vmselect传递`-replicationFactor=N`命令行标志指示它不在查询期间如果少于`-replicationFactor`个vmstorage节点不可用时将响应标记为部分响应。详情请参阅[集群可用性文档](ji-qun-ban-ben.md#high-availability)。
 
 为了在`N-1`个存储节点不可用时保持对新摄入数据的给定复制因子，集群必须包含至少`2*N-1`个`vmstorage`节点，其中N是复制因子。
 
