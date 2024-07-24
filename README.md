@@ -40,9 +40,8 @@ VictoriaMetrics的集群版本可以[在这里找到](victoriametrics/ji-qun-ban
 
 ## 联系作者
 
-* Github：[https://github.com/cloudfly](https://github.com/cloudfly)
-* Wechat：
-  *
-*
-
-    <figure><img src=".gitbook/assets/WechatIMG182.jpg" alt="" width="188"><figcaption><p>加微信（备注 victoriametrics）</p></figcaption></figure>
+| 方式     | 地址                                                                                                            |
+| ------ | ------------------------------------------------------------------------------------------------------------- |
+| Github | [https://github.com/cloudfly](https://github.com/cloudfly)                                                    |
+| 微信     | <p></p><p><img src=".gitbook/assets/WechatIMG182.jpg" alt="加微信（备注 victoriametrics）" data-size="original"></p> |
+|        |                                                                                                               |
