@@ -1,19 +1,37 @@
 # Rollup
 
-**Rollup函数**（也称为范围函数或窗口函数）在所选时间序列的给定回溯窗口上对原始样本的汇总计算。例如，`avg_over_time(temperature[24h])` 计算过去 24 小时内原始样本的平均温度。
+## **什么是 Rollup**
+
+**Rollup函数**（也称为范围函数或窗口函数）在所选 timeseries 的给定回溯窗口上对原始样本的汇总计算。例如，`avg_over_time(temperature[24h])`计算过去 24 小时内所有原始样本的平均温度值。
 
 更多细节：
 
-* 如果在Grafana中使用 rollup 函数来构建图形，那么每个点上的 rollup 都是独立计算的。例如，`avg_over_time(temperature[24h])`图表中的每个点显示了截止到该点的过去24小时内的平均温度。点之间的间隔由Grafana传递给`/api/v1/query_range`接口作为`step`查询参数设置。
+* 如果在Grafana中使用`rollup`函数来构建图形，那么每个点上的`rollup`都是独立计算的。例如，`avg_over_time(temperature[24h])`图表中的每个点显示了截止到该时间点的过去24小时内的平均温度。点之间的间隔由Grafana传递给`/api/v1/query_range`接口作为`step`查询参数设置。
 * 如果给定的查询语句返回多个 timeseries，则每个返回的序列都会单独计算汇总。
 * 如果方括号中的回溯窗口缺失，则MetricsQL会自动将回溯窗口设置为图表上点之间的间隔（即`/api/v1/query_range`中的`step`查询参数，Grafana中的`$__interval`值或MetricsQL中的`1i`持续时间）。例如，`rate(http_requests_total)`在Grafana中等同于`rate(http_requests_total[$__interval])`。它也等同于`rate(http_requests_total[1i])`。
 * 每个在MetricsQL中的系列选择器都必须包装在一个rollup函数中。否则，它会自动被包装成`default_rollup`。例如，`foo{bar="baz"}` 在执行计算之前会自动转换为 `default_rollup(foo{bar="baz"}[1i])`。
-* 如果在rollup函数中传递的参数不是series selector，那么内部的参数会自动转换为子查询。
+* 如果在rollup函数中传递的参数不是series selector，那么内部的参数会自动转换为[子查询](../zi-cha-xun.md)。
 * 所有的汇总函数都接受可选的 `keep_metric_names` 修饰符。如果设置了该修饰符，函数将在结果中保留指标名称。请参阅[这些文档](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names)。
 
 更多参见[隐式查询转换](https://docs.victoriametrics.com/MetricsQL.html#implicit-query-conversions)。
 
-支持的汇总函数列表：
+## 与 Prometheus 的普遍差异
+
+凡是涉及对回溯窗口样本值首尾样本值进行计算的 rollup 函数，比如 `rate`、`delta`、`increase` 等函数；其MetricsQL 和 PromQL 都存在统一的计算差异。因此 VictoriaMetrics 使用 `xxx_prometheus` 的命名提供了兼容 Prometheus 统计方式的 rollup 函数，如 `rate_prometheus`、`delta_prometheus`、`increase_prometheus` 等。而默认则使用 MetricsQL 的统计方式。
+
+以 increase 函数为例，MetricsQL 的计算方式更加精准，如下图所示。
+
+假设我们有5个样本值，当回溯窗口大小是`$__interval` 时，我们期望得到的就是`V3-V1`和`V5-V3`两个值。即当前回溯窗口的最后一个样本值应该与前一个回溯窗口的最后一个样本值计算，而不是和本窗口的第一个样本值计算。
+
+<figure><img src="../../../../.gitbook/assets/image (7).png" alt=""><figcaption><p>MetricsQL</p></figcaption></figure>
+
+再看 Prometheus 的计算方式，如下图所示。它使用一个回溯窗口的最后一个样本值，与该窗口的第一个值进行计算。因为 V1 样本不在第一个窗口内，V3 不再第二个窗口内，这就导致 Prometheus 计算出来的值是`V3-V2`和`V5-V4`，结果并不正确。
+
+<figure><img src="../../../../.gitbook/assets/image (8).png" alt=""><figcaption><p>Prometheus</p></figcaption></figure>
+
+此外，Prometheus 的这种统计方式还有另外一个问题。就是如果`$_interva`l大小的时间窗口内只有一个样本值，那么`rate`和`increase`这种汇总函数的结果为空。
+
+## 函数列表
 
 ### **absent\_over\_time**
 
@@ -71,67 +89,69 @@ Metric名称将从计算结果中剥离。增加 [keep\_metric\_names](https://d
 
 ### **count\_gt\_over\_time**
 
-`count_gt_over_time(series_selector[d], gt)` is a [rollup function](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions), which calculates the number of raw samples on the given lookbehind window `d`, which are bigger than `gt`. It is calculated independently per each time series returned from the given [series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering).
+`count_gt_over_time(series_selector[d], gt)` 计算时间窗口 d 中原始样本值大于`gt`的个数。它根据从给定[series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering)返回的每个时间序列单独执行计算。
 
-Metric names are stripped from the resulting rollups. Add [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) modifier in order to keep metric names.
+Metric名称将从计算结果中剥离。增加 [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) 修改器来保留 Metric 名称。
 
-See also [count\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_over\_time).
+另请参阅 [count\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_over\_time).
 
 ### **count\_le\_over\_time**
 
-`count_le_over_time(series_selector[d], le)` is a [rollup function](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions), which calculates the number of raw samples on the given lookbehind window `d`, which don't exceed `le`. It is calculated independently per each time series returned from the given [series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering).
+`count_le_over_time(series_selector[d], le)` 计算时间窗口 d 中原始样本值小于`lt`的个数。它根据从给定[series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering)返回的每个时间序列单独执行计算。
 
-Metric names are stripped from the resulting rollups. Add [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) modifier in order to keep metric names.
+Metric名称将从计算结果中剥离。增加 [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) 修改器来保留 Metric 名称。
 
-See also [count\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_over\_time).
+另请参阅 [count\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_over\_time).
 
 ### **count\_ne\_over\_time**
 
-`count_ne_over_time(series_selector[d], ne)` is a [rollup function](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions), which calculates the number of raw samples on the given lookbehind window `d`, which aren't equal to `ne`. It is calculated independently per each time series returned from the given [series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering).
+`count_ne_over_time(series_selector[d], ne)` 计算时间窗口 d 中原始样本值不等于`ne`的个数。它根据从给定[series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering)返回的每个时间序列单独执行计算。
 
-Metric names are stripped from the resulting rollups. Add [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) modifier in order to keep metric names.
+Metric名称将从计算结果中剥离。增加 [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) 修改器来保留 Metric 名称。
 
-See also [count\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_over\_time).
+另请参阅 [count\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_over\_time).
 
 ### **count\_over\_time**
 
-`count_over_time(series_selector[d])` is a [rollup function](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions), which calculates the number of raw samples on the given lookbehind window `d` per each time series returned from the given [series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering).
+`count_over_time(series_selector[d])` 计算时间窗口 d 中原始样本值的个数。它根据从给定[series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering)返回的每个时间序列单独执行计算。
 
-Metric names are stripped from the resulting rollups. Add [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) modifier in order to keep metric names.
+Metric名称将从计算结果中剥离。增加 [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) 修改器来保留 Metric 名称。
 
-This function is supported by PromQL. See also [count\_le\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_le\_over\_time), [count\_gt\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_gt\_over\_time), [count\_eq\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_eq\_over\_time) and [count\_ne\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_ne\_over\_time).
+这个函数 PromQL 中也支持，另请参阅 [count\_le\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_le\_over\_time), [count\_gt\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_gt\_over\_time), [count\_eq\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_eq\_over\_time) 和 [count\_ne\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_ne\_over\_time)。
 
 ### **decreases\_over\_time**
 
-`decreases_over_time(series_selector[d])` is a [rollup function](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions), which calculates the number of raw sample value decreases over the given lookbehind window `d` per each time series returned from the given [series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering).
+`decreases_over_time(series_selector[d])` 计算给定时间窗口d上原始样本值的下降值。根据从给定[series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering)返回的每个时间序列单独执行计算。
 
-Metric names are stripped from the resulting rollups. Add [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) modifier in order to keep metric names.
+Metric名称将从计算结果中剥离。增加 [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) 修改器来保留 Metric 名称。
 
-See also [increases\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#increases\_over\_time).
+另请参阅 [increases\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#increases\_over\_time).
 
 ### **default\_rollup**
 
-`default_rollup(series_selector[d])` is a [rollup function](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions), which returns the last raw sample value on the given lookbehind window `d` per each time series returned from the given [series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering).
+`default_rollup(series_selector[d])`  返回给定时间窗口d中最后一个原始样本。根据从给定[series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering)返回的每个时间序列单独执行计算。
 
 ### **delta**
 
-`delta(series_selector[d])` is a [rollup function](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions), which calculates the difference between the last sample before the given lookbehind window `d` and the last sample at the given lookbehind window `d` per each time series returned from the given [series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering).
+`delta(series_selector[d])` is a [rollup function](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions),&#x20;
 
-The behaviour of `delta()` function in MetricsQL is slightly different to the behaviour of `delta()` function in Prometheus. See [this article](https://medium.com/@romanhavronenko/victoriametrics-promql-compliance-d4318203f51e) for details.
+计算给定回溯窗口 d 之前的最后一个样本和该窗口的最后一个样本的差异。根据从给定[series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering)返回的每个时间序列单独执行计算。
 
-Metric names are stripped from the resulting rollups. Add [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) modifier in order to keep metric names.
+MetricsQL中  `delta()` 函数的计算逻辑和 Prometheus 中的 delta() 函数计算逻辑存在轻微差异，详情看[这里](rollup.md#yu-prometheus-de-pu-bian-cha-yi)。
 
-This function is supported by PromQL. See also [increase](https://docs.victoriametrics.com/MetricsQL.html#increase) and [delta\_prometheus](https://docs.victoriametrics.com/MetricsQL.html#delta\_prometheus).
+Metric名称将从计算结果中剥离。增加 [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) 修改器来保留 Metric 名称。
+
+该函数 PromQL 也支持. 另请参阅 [increase](https://docs.victoriametrics.com/MetricsQL.html#increase) 和 [delta\_prometheus](https://docs.victoriametrics.com/MetricsQL.html#delta\_prometheus).
 
 ### **delta\_prometheus**
 
-`delta_prometheus(series_selector[d])` is a [rollup function](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions), which calculates the difference between the first and the last samples at the given lookbehind window `d` per each time series returned from the given [series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering).
+`delta_prometheus(series_selector[d])` 计算回溯窗口中第一个样本和最后一个样本的差异。根据从给定[series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering)返回的每个时间序列单独执行计算。
 
-The behaviour of `delta_prometheus()` is close to the behaviour of `delta()` function in Prometheus. See [this article](https://medium.com/@romanhavronenko/victoriametrics-promql-compliance-d4318203f51e) for details.
+`delta_prometheus()` 的计算逻辑和 Prometheus `delta()` 一致。 详情看[这里](rollup.md#yu-prometheus-de-pu-bian-cha-yi)。
 
-Metric names are stripped from the resulting rollups. Add [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) modifier in order to keep metric names.
+Metric名称将从计算结果中剥离。增加 [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) 修改器来保留 Metric 名称。
 
-See also [delta](https://docs.victoriametrics.com/MetricsQL.html#delta).
+另请参见 [delta](https://docs.victoriametrics.com/MetricsQL.html#delta).
 
 ### **deriv**
 
