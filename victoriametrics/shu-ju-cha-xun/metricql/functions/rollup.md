@@ -29,47 +29,45 @@
 
 ### **ascent\_over\_time**
 
-`ascent_over_time(series_selector[d])` is a [rollup function](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions), which calculates ascent of raw sample values on the given lookbehind window `d`. The calculations are performed individually per each time series returned from the given [series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering).
+`ascent_over_time(series_selector[d])` 计算给定时间窗口d上原始样本值的上升。根据从给定[series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering)返回的每个时间序列单独执行计算。
 
-This function is useful for tracking height gains in GPS tracking. Metric names are stripped from the resulting rollups.
+该功能用于在GPS跟踪中跟踪高度增益。Metric名称将从计算结果中剥离。增加 [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) 修改器来保留 Metric 名称。
 
-Metric names are stripped from the resulting rollups. Add [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) modifier in order to keep metric names.
-
-See also [descent\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#descent\_over\_time).
+另请参阅 [descent\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#descent\_over\_time)。
 
 ### **avg\_over\_time**
 
-`avg_over_time(series_selector[d])` is a [rollup function](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions), which calculates the average value over raw samples on the given lookbehind window `d` per each time series returned from the given [series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering).
+`avg_over_time(series_selector[d])` 计算给定时间窗口d上原始样本值的平均值。根据从给定[series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering)返回的每个时间序列单独执行计算。
 
-This function is supported by PromQL. See also [median\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#median\_over\_time).
+这个函数在 PromQL 中也支持，另请参阅 [median\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#median\_over\_time).
 
 ### **changes**
 
-`changes(series_selector[d])` is a [rollup function](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions), which calculates the number of times the raw samples changed on the given lookbehind window `d` per each time series returned from the given [series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering).
+`changes(series_selector[d])` 计算给定时间窗口d上原始样本值的变化。根据从给定[series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering)返回的每个时间序列单独执行计算。
 
-Unlike `changes()` in Prometheus it takes into account the change from the last sample before the given lookbehind window `d`. See [this article](https://medium.com/@romanhavronenko/victoriametrics-promql-compliance-d4318203f51e) for details.
+不像 Prometheus里的 `changes()` ，它考虑了给定时间窗口 d 中最后一个样本的变化，详情请参阅[这篇文章](https://medium.com/@romanhavronenko/victoriametrics-promql-compliance-d4318203f51e)。
 
-Metric names are stripped from the resulting rollups. Add [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) modifier in order to keep metric names.
+Metric名称将从计算结果中剥离。增加 [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) 修改器来保留 Metric 名称。
 
-This function is supported by PromQL. See also [changes\_prometheus](https://docs.victoriametrics.com/MetricsQL.html#changes\_prometheus).
+这个函数 PromQL 中也支持，另请参阅 [changes\_prometheus](https://docs.victoriametrics.com/MetricsQL.html#changes\_prometheus).
 
 ### **changes\_prometheus**
 
-`changes_prometheus(series_selector[d])` is a [rollup function](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions), which calculates the number of times the raw samples changed on the given lookbehind window `d` per each time series returned from the given [series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering).
+`changes_prometheus(series_selector[d])` 计算时间窗口 d 中原始样本值变化的次数。根据从给定[series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering)返回的每个时间序列单独执行计算。
 
-It doesn't take into account the change from the last sample before the given lookbehind window `d` in the same way as Prometheus does. See [this article](https://medium.com/@romanhavronenko/victoriametrics-promql-compliance-d4318203f51e) for details.
+它不考虑在时间窗口 d 之前的最后一个样本值的变化，这和 Prometheus 的逻辑是一样的。详情请参阅[这篇文章](https://medium.com/@romanhavronenko/victoriametrics-promql-compliance-d4318203f51e)。
 
-Metric names are stripped from the resulting rollups. Add [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) modifier in order to keep metric names.
+Metric名称将从计算结果中剥离。增加 [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) 修改器来保留 Metric 名称。
 
-This function is supported by PromQL. See also [changes](https://docs.victoriametrics.com/MetricsQL.html#changes).
+这个函数 PromQL 中也支持，另请参阅 [changes](https://docs.victoriametrics.com/MetricsQL.html#changes).
 
 ### **count\_eq\_over\_time**
 
-`count_eq_over_time(series_selector[d], eq)` is a [rollup function](https://docs.victoriametrics.com/MetricsQL.html#rollup-functions), which calculates the number of raw samples on the given lookbehind window `d`, which are equal to `eq`. It is calculated independently per each time series returned from the given [series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering).
+`count_eq_over_time(series_selector[d], eq)` 计算时间窗口 d 中原始样本值等于`eq`的个数。它根据从给定[series\_selector](https://docs.victoriametrics.com/keyConcepts.html#filtering)返回的每个时间序列单独执行计算。
 
-Metric names are stripped from the resulting rollups. Add [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) modifier in order to keep metric names.
+Metric名称将从计算结果中剥离。增加 [keep\_metric\_names](https://docs.victoriametrics.com/MetricsQL.html#keep\_metric\_names) 修改器来保留 Metric 名称。
 
-See also [count\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_over\_time).
+另请参阅 [count\_over\_time](https://docs.victoriametrics.com/MetricsQL.html#count\_over\_time).
 
 ### **count\_gt\_over\_time**
 
